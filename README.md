@@ -21,9 +21,14 @@ Requires: Node.js 20, pnpm 9, Docker Desktop.
 
 ```bash
 pnpm install
-docker compose -f infra/docker-compose.dev.yml up -d
-pnpm --filter @vittoria/api dev
-pnpm --filter @vittoria/admin dev
+pnpm dev:infra      # starts postgres, redis, minio, mailhog
+pnpm dev:api        # starts NestJS API at http://localhost:3000
+pnpm dev:admin      # starts admin SPA at http://localhost:5173
+```
+
+Stop infra:
+```bash
+pnpm dev:infra:down
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for full setup including iOS and Android.

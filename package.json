@@ -10,7 +10,11 @@
     "lint": "pnpm -r lint",
     "test": "pnpm -r test",
     "build": "pnpm -r build",
-    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\""
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "dev:infra": "docker compose -f infra/docker-compose.dev.yml up -d",
+    "dev:infra:down": "docker compose -f infra/docker-compose.dev.yml down",
+    "dev:api": "pnpm --filter @vittoria/api dev",
+    "dev:admin": "pnpm --filter @vittoria/admin dev"
   },
   "devDependencies": {
     "prettier": "^3.2.5",
