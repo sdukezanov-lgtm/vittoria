@@ -1,0 +1,22 @@
+{
+  "name": "vittoria",
+  "version": "0.0.0",
+  "private": true,
+  "packageManager": "pnpm@9.0.0",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "lint": "pnpm -r lint",
+    "test": "pnpm -r test",
+    "build": "pnpm -r build",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\""
+  },
+  "devDependencies": {
+    "prettier": "^3.2.5",
+    "typescript": "^5.4.5",
+    "eslint": "^8.57.0",
+    "@typescript-eslint/parser": "^7.7.0",
+    "@typescript-eslint/eslint-plugin": "^7.7.0"
+  }
+}
