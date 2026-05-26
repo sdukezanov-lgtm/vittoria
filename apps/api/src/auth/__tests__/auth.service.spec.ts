@@ -22,13 +22,15 @@ const makeDeps = () => {
     }),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } as any;
-  return { prisma, sms, audit, config };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const tokens = { issue: jest.fn(), verifyAccess: jest.fn(), verifyRefresh: jest.fn() } as any;
+  return { prisma, sms, audit, config, tokens };
 };
 
 describe('AuthService.requestCode (unit)', () => {
   it('creates a hashed code, sends SMS, records audit', async () => {
-    const { prisma, sms, audit, config } = makeDeps();
-    const svc = new AuthService(prisma, sms, audit, config);
+    const { prisma, sms, audit, config, tokens } = makeDeps();
+    const svc = new AuthService(prisma, sms, audit, config, tokens);
 
     const res = await svc.requestCode('+79991234567');
 
@@ -49,14 +51,14 @@ describe('AuthService.requestCode (unit)', () => {
   });
 
   it('rejects when a recent code was already issued', async () => {
-    const { prisma, sms, audit, config } = makeDeps();
+    const { prisma, sms, audit, config, tokens } = makeDeps();
     prisma.authCode.findFirst.mockResolvedValue({
       id: 'c0',
       phone: '+79991234567',
       createdAt: new Date(), // just now
     });
 
-    const svc = new AuthService(prisma, sms, audit, config);
+    const svc = new AuthService(prisma, sms, audit, config, tokens);
     await expect(svc.requestCode('+79991234567')).rejects.toThrow(/rate/i);
     expect(sms.send).not.toHaveBeenCalled();
   });

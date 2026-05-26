@@ -1,11 +1,12 @@
-import { Inject, Injectable, BadRequestException } from '@nestjs/common';
+import { Inject, Injectable, BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { SMS_PROVIDER, type SmsProvider } from '../sms/sms.types';
 import type { Env } from '../config/env.schema';
 import * as bcrypt from 'bcrypt';
-import { randomInt } from 'node:crypto';
+import { randomInt, randomUUID } from 'node:crypto';
+import { TokensService } from './tokens.service';
 
 export interface RequestCodeResult {
   retryAfterSec: number;
@@ -18,6 +19,7 @@ export class AuthService {
     @Inject(SMS_PROVIDER) private readonly sms: SmsProvider,
     private readonly audit: AuditService,
     private readonly config: ConfigService<Env, true>,
+    private readonly tokens: TokensService,
   ) {}
 
   async requestCode(phone: string): Promise<RequestCodeResult> {
@@ -58,5 +60,77 @@ export class AuthService {
     });
 
     return { retryAfterSec: Math.ceil(60 / rateLimitPerMin) };
+  }
+
+  async verifyCode(
+    phone: string,
+    code: string,
+    deviceInfo: Record<string, unknown> = {},
+  ): Promise<{ accessToken: string; refreshToken: string; user: { id: string; phone: string; role: string } }> {
+    const maxAttempts = this.config.get('OTP_MAX_ATTEMPTS', { infer: true });
+    const refreshTtlSec = this.config.get('JWT_REFRESH_TTL_SEC', { infer: true });
+
+    const authCode = await this.prisma.authCode.findFirst({
+      where: { phone, consumedAt: null, expiresAt: { gt: new Date() } },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (!authCode) {
+      throw new UnauthorizedException({ code: 'AUTH_CODE_INVALID', message: 'invalid or expired code' });
+    }
+    if (authCode.attempts >= maxAttempts) {
+      throw new UnauthorizedException({ code: 'AUTH_CODE_LOCKED', message: 'too many attempts' });
+    }
+
+    const ok = await bcrypt.compare(code, authCode.codeHash);
+
+    if (!ok) {
+      await this.prisma.authCode.update({
+        where: { id: authCode.id },
+        data: { attempts: { increment: 1 } },
+      });
+      throw new UnauthorizedException({ code: 'AUTH_CODE_INVALID', message: 'invalid code' });
+    }
+
+    await this.prisma.authCode.update({
+      where: { id: authCode.id },
+      data: { consumedAt: new Date() },
+    });
+
+    const user = await this.prisma.user.upsert({
+      where: { phone },
+      update: { lastLoginAt: new Date() },
+      create: { phone, lastLoginAt: new Date() },
+    });
+
+    const jti = randomUUID();
+    const { accessToken, refreshToken } = await this.tokens.issue({
+      userId: user.id,
+      role: user.role,
+      jti,
+    });
+
+    const refreshHash = await bcrypt.hash(refreshToken, 10);
+    await this.prisma.session.create({
+      data: {
+        id: jti,
+        userId: user.id,
+        refreshTokenHash: refreshHash,
+        deviceInfo: deviceInfo as object,
+        expiresAt: new Date(Date.now() + refreshTtlSec * 1000),
+      },
+    });
+
+    await this.audit.record({
+      actorUserId: user.id,
+      action: 'auth.code.verified',
+      entity: 'User',
+      entityId: user.id,
+    });
+
+    return {
+      accessToken,
+      refreshToken,
+      user: { id: user.id, phone: user.phone!, role: user.role },
+    };
   }
 }

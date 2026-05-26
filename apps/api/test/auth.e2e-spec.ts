@@ -41,4 +41,56 @@ describe('Auth (e2e)', () => {
       .send({ phone: '12345' });
     expect(res.status).toBe(400);
   });
+
+  it('POST /auth/verify-code with correct code returns tokens and creates a user + session', async () => {
+    // Seed an auth code directly so we control the value.
+    const bcrypt = await import('bcrypt');
+    const code = '1234';
+    const codeHash = await bcrypt.hash(code, 10);
+    // Ensure user exists (FK requirement for auth_codes.phone)
+    await prisma.user.upsert({
+      where: { phone: '+79991234567' },
+      update: {},
+      create: { phone: '+79991234567' },
+    });
+    await prisma.authCode.create({
+      data: { phone: '+79991234567', codeHash, expiresAt: new Date(Date.now() + 60_000) },
+    });
+
+    const res = await request(app.getHttpServer())
+      .post('/auth/verify-code')
+      .send({ phone: '+79991234567', code, device_info: { platform: 'ios' } });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      access_token: expect.any(String),
+      refresh_token: expect.any(String),
+      user: expect.objectContaining({ phone: '+79991234567', role: 'client' }),
+    });
+
+    const users = await prisma.user.findMany({ where: { phone: '+79991234567' } });
+    expect(users).toHaveLength(1);
+    const sessions = await prisma.session.findMany({ where: { userId: users[0].id } });
+    expect(sessions).toHaveLength(1);
+  });
+
+  it('POST /auth/verify-code with wrong code returns 401 and increments attempts', async () => {
+    const bcrypt = await import('bcrypt');
+    const codeHash = await bcrypt.hash('1234', 10);
+    await prisma.user.upsert({
+      where: { phone: '+79991234567' },
+      update: {},
+      create: { phone: '+79991234567' },
+    });
+    await prisma.authCode.create({
+      data: { phone: '+79991234567', codeHash, expiresAt: new Date(Date.now() + 60_000) },
+    });
+
+    const res = await request(app.getHttpServer())
+      .post('/auth/verify-code')
+      .send({ phone: '+79991234567', code: '9999' });
+    expect(res.status).toBe(401);
+    const c = await prisma.authCode.findFirst({ where: { phone: '+79991234567' } });
+    expect(c?.attempts).toBe(1);
+  });
 });
