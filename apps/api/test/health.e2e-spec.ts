@@ -1,26 +1,30 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
-import { AppModule } from '../src/app.module';
+import { createTestApp } from './helpers/app.factory';
+import { startPostgres, stopPostgres } from './helpers/testcontainers-postgres';
 
-describe('HealthController (e2e)', () => {
+describe('Health (e2e)', () => {
   let app: INestApplication;
 
   beforeAll(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
-    app = moduleFixture.createNestApplication();
-    await app.init();
-  });
+    await startPostgres();
+    app = await createTestApp();
+  }, 120_000);
 
   afterAll(async () => {
-    await app.close();
+    await app?.close();
+    await stopPostgres();
   });
 
-  it('GET /healthz returns 200 with status ok', async () => {
+  it('GET /healthz → 200 { status: ok }', async () => {
     const res = await request(app.getHttpServer()).get('/healthz');
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ status: 'ok' });
+  });
+
+  it('GET /readyz → 200 with db + redis status', async () => {
+    const res = await request(app.getHttpServer()).get('/readyz');
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ status: 'ok', checks: { db: 'ok', redis: 'ok' } });
   });
 });
