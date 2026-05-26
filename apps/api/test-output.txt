@@ -1,0 +1,13 @@
+
+> @vittoria/api@0.0.0 test:unit C:\sad\Vittoriy\apps\api
+> jest
+
+PASS src/config/__tests__/env.schema.spec.ts
+PASS src/sms/__tests__/dev-sms.provider.spec.ts
+PASS src/redis/__tests__/redis.service.spec.ts
+
+Test Suites: 3 passed, 3 total
+Tests:       5 passed, 5 total
+Snapshots:   0 total
+Time:        5.864 s
+Ran all test suites.
