@@ -29,6 +29,8 @@
   },
   "devDependencies": {
     "@nestjs/cli": "^10.3.2",
+    "@testcontainers/postgresql": "^10.10.0",
+    "testcontainers": "^10.10.0",
     "dotenv": "^16.4.5",
     "prisma": "^5.18.0",
     "@nestjs/schematics": "^10.1.1",
