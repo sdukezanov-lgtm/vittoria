@@ -21,7 +21,8 @@ describe('envSchema', () => {
   });
 
   it('rejects missing DATABASE_URL', () => {
-    const { DATABASE_URL: _omit, ...rest } = valid;
+    const rest = { ...valid } as Partial<typeof valid>;
+    delete rest.DATABASE_URL;
     expect(() => envSchema.parse(rest)).toThrow(/DATABASE_URL/);
   });
 
