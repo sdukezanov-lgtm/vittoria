@@ -45,6 +45,8 @@ apps/android/*.iml
 coverage/
 .nyc_output/
 junit.xml
+test-output.txt
+test-output.log
 
 # Docker
 infra/.env
