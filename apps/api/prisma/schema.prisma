@@ -15,63 +15,63 @@ enum UserRole {
 }
 
 model User {
-  id                    String   @id @default(uuid()) @db.Uuid
-  phone                 String?  @unique
-  role                  UserRole @default(client)
-  firstName             String?  @map("first_name")
-  lastName              String?  @map("last_name")
-  amocrmContactId       Int?     @unique @map("amocrm_contact_id")
-  consentAcceptedAt     DateTime? @map("consent_accepted_at")
-  lastLoginAt           DateTime? @map("last_login_at")
-  createdAt             DateTime @default(now()) @map("created_at")
-  updatedAt             DateTime @updatedAt @map("updated_at")
+  id                String    @id @default(uuid()) @db.Uuid
+  phone             String?   @unique
+  role              UserRole  @default(client)
+  firstName         String?   @map("first_name")
+  lastName          String?   @map("last_name")
+  amocrmContactId   Int?      @unique @map("amocrm_contact_id")
+  consentAcceptedAt DateTime? @map("consent_accepted_at")
+  lastLoginAt       DateTime? @map("last_login_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
 
-  authCodes  AuthCode[]
-  sessions   Session[]
+  authCodes AuthCode[]
+  sessions  Session[]
 
   @@map("users")
 }
 
 model AuthCode {
-  id         String   @id @default(uuid()) @db.Uuid
+  id         String    @id @default(uuid()) @db.Uuid
   phone      String
-  codeHash   String   @map("code_hash")
-  attempts   Int      @default(0)
-  expiresAt  DateTime @map("expires_at")
+  codeHash   String    @map("code_hash")
+  attempts   Int       @default(0)
+  expiresAt  DateTime  @map("expires_at")
   consumedAt DateTime? @map("consumed_at")
-  createdAt  DateTime @default(now()) @map("created_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
 
-  user   User?   @relation(fields: [phone], references: [phone])
+  user User? @relation(fields: [phone], references: [phone])
 
   @@index([phone, createdAt(sort: Desc)])
   @@map("auth_codes")
 }
 
 model Session {
-  id              String   @id @default(uuid()) @db.Uuid
-  userId          String   @map("user_id") @db.Uuid
-  refreshTokenHash String  @map("refresh_token_hash")
-  deviceInfo      Json     @default("{}") @map("device_info")
-  revokedAt       DateTime? @map("revoked_at")
-  expiresAt       DateTime @map("expires_at")
-  createdAt       DateTime @default(now()) @map("created_at")
+  id               String    @id @default(uuid()) @db.Uuid
+  userId           String    @map("user_id") @db.Uuid
+  refreshTokenHash String    @map("refresh_token_hash")
+  deviceInfo       Json      @default("{}") @map("device_info")
+  revokedAt        DateTime? @map("revoked_at")
+  expiresAt        DateTime  @map("expires_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
 
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@map("sessions")
 }
 
 model AuditLog {
-  id            String   @id @default(uuid()) @db.Uuid
-  actorUserId   String?  @map("actor_user_id") @db.Uuid
-  action        String
-  entity        String
-  entityId      String   @map("entity_id")
-  before        Json?
-  after         Json?
-  requestId     String?  @map("request_id")
-  createdAt     DateTime @default(now()) @map("created_at")
+  id          String   @id @default(uuid()) @db.Uuid
+  actorUserId String?  @map("actor_user_id") @db.Uuid
+  action      String
+  entity      String
+  entityId    String   @map("entity_id")
+  before      Json?
+  after       Json?
+  requestId   String?  @map("request_id")
+  createdAt   DateTime @default(now()) @map("created_at")
 
   @@index([entity, entityId])
   @@index([actorUserId, createdAt(sort: Desc)])
