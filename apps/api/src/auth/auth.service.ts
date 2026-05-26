@@ -36,6 +36,14 @@ export class AuthService {
     const codeHash = await bcrypt.hash(code, 10);
     const expiresAt = new Date(Date.now() + ttlSec * 1000);
 
+    // Ensure a user record exists for this phone before creating the auth code
+    // (auth_codes.phone has a FK to users.phone)
+    await this.prisma.user.upsert({
+      where: { phone },
+      create: { phone },
+      update: {},
+    });
+
     const created = await this.prisma.authCode.create({
       data: { phone, codeHash, expiresAt },
     });
