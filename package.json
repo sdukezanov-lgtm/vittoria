@@ -14,7 +14,9 @@
     "dev:infra": "docker compose -f infra/docker-compose.dev.yml up -d",
     "dev:infra:down": "docker compose -f infra/docker-compose.dev.yml down",
     "dev:api": "pnpm --filter @vittoria/api dev",
-    "dev:admin": "pnpm --filter @vittoria/admin dev"
+    "dev:admin": "pnpm --filter @vittoria/admin dev",
+    "db:migrate": "pnpm --filter @vittoria/api prisma:migrate:dev",
+    "db:studio": "pnpm --filter @vittoria/api prisma:studio"
   },
   "devDependencies": {
     "prettier": "^3.2.5",

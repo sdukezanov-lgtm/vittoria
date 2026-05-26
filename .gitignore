@@ -25,6 +25,7 @@ out/
 .env
 .env.local
 .env.*.local
+apps/api/.env
 
 # iOS
 apps/ios/Pods/
