@@ -3,15 +3,18 @@ import request from 'supertest';
 import { createTestApp } from './helpers/app.factory';
 import { startPostgres, stopPostgres } from './helpers/testcontainers-postgres';
 import { PrismaService } from '../src/prisma/prisma.service';
+import { ThrottlerStorage, ThrottlerStorageService } from '@nestjs/throttler';
 
 describe('Auth (e2e)', () => {
   let app: INestApplication;
   let prisma: PrismaService;
+  let throttlerStorage: ThrottlerStorageService;
 
   beforeAll(async () => {
     await startPostgres();
     app = await createTestApp();
     prisma = app.get(PrismaService);
+    throttlerStorage = app.get(ThrottlerStorage) as ThrottlerStorageService;
   }, 120_000);
 
   afterAll(async () => {
@@ -23,6 +26,8 @@ describe('Auth (e2e)', () => {
     await prisma.authCode.deleteMany();
     await prisma.session.deleteMany();
     await prisma.user.deleteMany();
+    // Reset throttler in-memory counters so each test starts with a clean slate.
+    throttlerStorage?.storage?.clear();
   });
 
   it('POST /auth/request-code returns 200 with retry_after_sec and persists an auth code', async () => {
@@ -156,5 +161,19 @@ describe('Auth (e2e)', () => {
   it('protected endpoint without Authorization → 401', async () => {
     const res = await request(app.getHttpServer()).post('/auth/logout').send();
     expect(res.status).toBe(401);
+  });
+
+  it('POST /auth/request-code is rate-limited at the throttler', async () => {
+    // Hit it 6 times in quick succession with different phones to bypass per-phone rate limit.
+    // The throttler is per-IP, so all 6 share the same IP in test (loopback).
+    const results: number[] = [];
+    for (let i = 0; i < 6; i++) {
+      const phone = `+7999000000${i}`;
+      const res = await request(app.getHttpServer()).post('/auth/request-code').send({ phone });
+      results.push(res.status);
+    }
+    // First 5 should be 200, the 6th should be 429.
+    expect(results.slice(0, 5).every((s) => s === 200)).toBe(true);
+    expect(results[5]).toBe(429);
   });
 });

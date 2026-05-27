@@ -1,4 +1,5 @@
 import { Body, Controller, HttpCode, Post } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { RequestCodeDto } from './dto/request-code.dto';
 import { VerifyCodeDto } from './dto/verify-code.dto';
@@ -12,6 +13,7 @@ export class AuthController {
   constructor(private readonly auth: AuthService) {}
 
   @Public()
+  @Throttle({ global: { limit: 5, ttl: 60_000 } })
   @Post('request-code')
   @HttpCode(200)
   async requestCode(@Body() dto: RequestCodeDto): Promise<{ retry_after_sec: number }> {
@@ -20,6 +22,7 @@ export class AuthController {
   }
 
   @Public()
+  @Throttle({ global: { limit: 10, ttl: 60_000 } })
   @Post('verify-code')
   @HttpCode(200)
   async verifyCode(@Body() dto: VerifyCodeDto): Promise<{
