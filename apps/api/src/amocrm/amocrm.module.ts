@@ -3,6 +3,7 @@ import { AmocrmConfig } from './amocrm.config';
 import { AmocrmHttpClient } from './amocrm-http.client';
 import { AmocrmMockClient } from './amocrm-mock.client';
 import { AmocrmMapper } from './amocrm-mapper';
+import { AmocrmIdempotencyService } from './amocrm-idempotency.service';
 import { AMOCRM_CLIENT } from './amocrm.types';
 
 @Module({
@@ -11,6 +12,7 @@ import { AMOCRM_CLIENT } from './amocrm.types';
     AmocrmMapper,
     AmocrmMockClient,
     AmocrmHttpClient,
+    AmocrmIdempotencyService,
     {
       provide: AMOCRM_CLIENT,
       inject: [AmocrmConfig, AmocrmMockClient, AmocrmHttpClient],
@@ -18,6 +20,6 @@ import { AMOCRM_CLIENT } from './amocrm.types';
         cfg.mode === 'mock' ? mock : http,
     },
   ],
-  exports: [AMOCRM_CLIENT, AmocrmConfig, AmocrmMapper, AmocrmMockClient],
+  exports: [AMOCRM_CLIENT, AmocrmConfig, AmocrmMapper, AmocrmMockClient, AmocrmIdempotencyService],
 })
 export class AmocrmModule {}
