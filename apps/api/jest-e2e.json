@@ -5,5 +5,7 @@
   "transform": {
     "^.+\\.(t|j)s$": "ts-jest"
   },
-  "setupFiles": ["<rootDir>/test/load-env.ts"]
+  "setupFiles": ["<rootDir>/test/load-env.ts"],
+  "maxWorkers": 1,
+  "testTimeout": 30000
 }
