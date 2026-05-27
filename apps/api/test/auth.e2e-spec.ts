@@ -31,6 +31,11 @@ describe('Auth (e2e)', () => {
   });
 
   it('POST /auth/request-code returns 200 with retry_after_sec and persists an auth code', async () => {
+    await prisma.user.upsert({
+      where: { phone: '+79991234567' },
+      update: {},
+      create: { phone: '+79991234567' },
+    });
     const res = await request(app.getHttpServer())
       .post('/api/v1/auth/request-code')
       .send({ phone: '+79991234567' });
@@ -164,6 +169,13 @@ describe('Auth (e2e)', () => {
   });
 
   it('POST /auth/request-code is rate-limited at the throttler', async () => {
+    for (let i = 0; i < 6; i++) {
+      await prisma.user.upsert({
+        where: { phone: `+7999000000${i}` },
+        update: {},
+        create: { phone: `+7999000000${i}` },
+      });
+    }
     // Hit it 6 times in quick succession with different phones to bypass per-phone rate limit.
     // The throttler is per-IP, so all 6 share the same IP in test (loopback).
     const results: number[] = [];
@@ -175,5 +187,13 @@ describe('Auth (e2e)', () => {
     // First 5 should be 200, the 6th should be 429.
     expect(results.slice(0, 5).every((s) => s === 200)).toBe(true);
     expect(results[5]).toBe(429);
+  });
+
+  it('POST /auth/request-code returns 404 for unregistered phone', async () => {
+    const res = await request(app.getHttpServer())
+      .post('/api/v1/auth/request-code')
+      .send({ phone: '+78880000001' });
+    expect(res.status).toBe(404);
+    expect(res.body.error.code).toBe('AUTH_PHONE_NOT_REGISTERED');
   });
 });

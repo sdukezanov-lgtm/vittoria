@@ -1,4 +1,4 @@
-import { Inject, Injectable, BadRequestException, UnauthorizedException } from '@nestjs/common';
+import { Inject, Injectable, BadRequestException, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
@@ -38,13 +38,13 @@ export class AuthService {
     const codeHash = await bcrypt.hash(code, 10);
     const expiresAt = new Date(Date.now() + ttlSec * 1000);
 
-    // Ensure a user record exists for this phone before creating the auth code
-    // (auth_codes.phone has a FK to users.phone)
-    await this.prisma.user.upsert({
-      where: { phone },
-      create: { phone },
-      update: {},
-    });
+    const user = await this.prisma.user.findUnique({ where: { phone } });
+    if (!user) {
+      throw new NotFoundException({
+        code: 'AUTH_PHONE_NOT_REGISTERED',
+        message: 'phone is not registered',
+      });
+    }
 
     const created = await this.prisma.authCode.create({
       data: { phone, codeHash, expiresAt },

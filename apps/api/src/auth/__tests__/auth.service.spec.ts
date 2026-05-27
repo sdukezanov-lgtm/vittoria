@@ -3,7 +3,7 @@ import { AuthService } from '../auth.service';
 const makeDeps = () => {
   const prisma = {
     user: {
-      upsert: jest.fn().mockResolvedValue({ id: 'u1', phone: '+79991234567' }),
+      findUnique: jest.fn().mockResolvedValue({ id: 'u1', phone: '+79991234567' }),
     },
     authCode: {
       create: jest.fn().mockResolvedValue({ id: 'c1', phone: '+79991234567', expiresAt: new Date(Date.now() + 300_000) }),
@@ -60,6 +60,15 @@ describe('AuthService.requestCode (unit)', () => {
 
     const svc = new AuthService(prisma, sms, audit, config, tokens);
     await expect(svc.requestCode('+79991234567')).rejects.toThrow(/rate/i);
+    expect(sms.send).not.toHaveBeenCalled();
+  });
+
+  it('throws when phone is not registered', async () => {
+    const { prisma, sms, audit, config, tokens } = makeDeps();
+    prisma.user.findUnique = jest.fn().mockResolvedValue(null);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const svc = new AuthService(prisma, sms, audit, config, tokens);
+    await expect(svc.requestCode('+78880000001')).rejects.toThrow(/registered/i);
     expect(sms.send).not.toHaveBeenCalled();
   });
 });
