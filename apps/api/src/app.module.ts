@@ -1,9 +1,11 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { ScheduleModule } from '@nestjs/schedule';
 import { ConfigModule } from './config/config.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { RedisModule } from './redis/redis.module';
+import { QueuesModule } from './queues/queues.module';
 import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
 import { AmocrmModule } from './amocrm/amocrm.module';
@@ -17,6 +19,8 @@ import { RolesGuard } from './common/guards/roles.guard';
     ConfigModule,
     PrismaModule,
     RedisModule,
+    ScheduleModule.forRoot(),
+    QueuesModule,
     AuditModule,
     AuthModule,
     AmocrmModule,
