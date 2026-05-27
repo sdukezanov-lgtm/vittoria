@@ -4,7 +4,7 @@ describe('NotificationsDedupService', () => {
   const makeRedis = () => {
     const store = new Map<string, string>();
     return {
-      set: jest.fn(async (key: string, value: string, _mode: string, _unit: string, _ttl: number, flag: string) => {
+      set: jest.fn(async (key: string, value: string, _mode: string, _ttl: number, flag: string) => {
         if (flag === 'NX' && store.has(key)) return null;
         store.set(key, value);
         return 'OK';

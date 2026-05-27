@@ -13,8 +13,7 @@ export class NotificationsDedupService {
    */
   async shouldSend(userId: string, event: string, entityId: string): Promise<boolean> {
     const key = `notif:dedup:${userId}:${event}:${entityId}`;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const result = await (this.redis.getClient() as any).set(key, '1', 'EX', 'sec', TTL_SEC, 'NX');
+    const result = await this.redis.getClient().set(key, '1', 'EX', TTL_SEC, 'NX');
     return result === 'OK';
   }
 }
