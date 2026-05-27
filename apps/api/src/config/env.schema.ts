@@ -15,6 +15,18 @@ export const envSchema = z.object({
   OTP_TTL_SEC: z.coerce.number().int().positive(),
   OTP_MAX_ATTEMPTS: z.coerce.number().int().positive(),
   OTP_REQUEST_RATE_LIMIT_PER_MIN: z.coerce.number().int().positive(),
+  AMOCRM_BASE_URL: z.string().url().default('https://example.amocrm.ru'),
+  AMOCRM_ACCESS_TOKEN: z.string().default('dev-mock-token'),
+  AMOCRM_WEBHOOK_SECRET: z.string().min(16, 'AMOCRM_WEBHOOK_SECRET must be at least 16 chars').default('dev-webhook-secret-change-me'),
+  AMOCRM_WEBHOOK_IP_ALLOWLIST: z.string().default(''),
+  AMOCRM_CLIENT_MODE: z.enum(['mock', 'http']).default('mock'),
+  AMOCRM_FAILSAFE_CRON: z.string().default('*/15 * * * *'),
+  AMOCRM_FIELD_STAGE_ID: z.coerce.number().int().positive().default(1001),
+  AMOCRM_FIELD_PROGRESS_ID: z.coerce.number().int().positive().default(1002),
+  AMOCRM_FIELD_ADMIN_COMMENT_ID: z.coerce.number().int().positive().default(1003),
+  AMOCRM_FIELD_PREPAYMENT_ID: z.coerce.number().int().positive().default(1004),
+  AMOCRM_FIELD_PARTNER_USER_ID: z.coerce.number().int().positive().default(1005),
+  AMOCRM_FIELD_PARTNER_SERVICES_ID: z.coerce.number().int().positive().default(1006),
 });
 
 export type Env = z.infer<typeof envSchema>;
