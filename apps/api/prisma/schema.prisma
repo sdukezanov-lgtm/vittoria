@@ -26,8 +26,10 @@ model User {
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
 
-  authCodes AuthCode[]
-  sessions  Session[]
+  authCodes     AuthCode[]
+  sessions      Session[]
+  clientOrders  Order[]    @relation("ClientOrders")
+  partnerOrders Order[]    @relation("PartnerOrders")
 
   @@map("users")
 }
@@ -60,6 +62,60 @@ model Session {
 
   @@index([userId])
   @@map("sessions")
+}
+
+enum OrderStage {
+  preparation_for_production
+  detailing
+  materials_arrival
+  production
+  transfer_to_warehouse
+  completeness_check
+  ready_for_delivery
+}
+
+model Order {
+  id               String     @id @default(uuid()) @db.Uuid
+  amocrmDealId     Int        @unique @map("amocrm_deal_id")
+  contractNumber   String?    @map("contract_number")
+  clientUserId     String     @map("client_user_id") @db.Uuid
+  partnerUserId    String?    @map("partner_user_id") @db.Uuid
+  productName      String?    @map("product_name")
+  totalAmount      Decimal?   @map("total_amount") @db.Decimal(12, 2)
+  prepaymentAmount Decimal?   @map("prepayment_amount") @db.Decimal(12, 2)
+  balanceDue       Decimal?   @map("balance_due") @db.Decimal(12, 2)
+  currentStage     OrderStage @default(preparation_for_production) @map("current_stage")
+  progressPercent  Int        @default(0) @map("progress_percent")
+  servicePhone     String?    @map("service_phone")
+  partnerServices  Json       @default("[]") @map("partner_services")
+  lastAdminComment String?    @map("last_admin_comment")
+  amocrmSyncedAt   DateTime?  @map("amocrm_synced_at")
+  version          Int        @default(0)
+  createdAt        DateTime   @default(now()) @map("created_at")
+  updatedAt        DateTime   @updatedAt @map("updated_at")
+
+  client  User                @relation("ClientOrders", fields: [clientUserId], references: [id], onDelete: Cascade)
+  partner User?               @relation("PartnerOrders", fields: [partnerUserId], references: [id], onDelete: SetNull)
+  history OrderStageHistory[]
+
+  @@index([clientUserId])
+  @@index([partnerUserId])
+  @@map("orders")
+}
+
+model OrderStageHistory {
+  id              String     @id @default(uuid()) @db.Uuid
+  orderId         String     @map("order_id") @db.Uuid
+  stage           OrderStage
+  progressPercent Int        @map("progress_percent")
+  comment         String?
+  changedByUserId String?    @map("changed_by_user_id") @db.Uuid
+  changedAt       DateTime   @default(now()) @map("changed_at")
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId, changedAt(sort: Desc)])
+  @@map("order_stage_history")
 }
 
 model AuditLog {
