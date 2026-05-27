@@ -13,6 +13,18 @@ jobs:
       matrix:
         package: ['@vittoria/api', '@vittoria/admin', '@vittoria/shared-types']
 
+    services:
+      # Used by @vittoria/api e2e tests (Postgres is provided per-test by Testcontainers).
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - uses: actions/checkout@v4
 
