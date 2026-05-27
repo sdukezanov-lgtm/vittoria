@@ -152,4 +152,9 @@ describe('Auth (e2e)', () => {
       .send({ refresh_token: refresh });
     expect(reuse.status).toBe(401);
   });
+
+  it('protected endpoint without Authorization → 401', async () => {
+    const res = await request(app.getHttpServer()).post('/auth/logout').send();
+    expect(res.status).toBe(401);
+  });
 });
