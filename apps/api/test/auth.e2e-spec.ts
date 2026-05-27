@@ -32,7 +32,7 @@ describe('Auth (e2e)', () => {
 
   it('POST /auth/request-code returns 200 with retry_after_sec and persists an auth code', async () => {
     const res = await request(app.getHttpServer())
-      .post('/auth/request-code')
+      .post('/api/v1/auth/request-code')
       .send({ phone: '+79991234567' });
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({ retry_after_sec: expect.any(Number) });
@@ -42,7 +42,7 @@ describe('Auth (e2e)', () => {
 
   it('POST /auth/request-code rejects malformed phone with 400', async () => {
     const res = await request(app.getHttpServer())
-      .post('/auth/request-code')
+      .post('/api/v1/auth/request-code')
       .send({ phone: '12345' });
     expect(res.status).toBe(400);
   });
@@ -63,7 +63,7 @@ describe('Auth (e2e)', () => {
     });
 
     const res = await request(app.getHttpServer())
-      .post('/auth/verify-code')
+      .post('/api/v1/auth/verify-code')
       .send({ phone: '+79991234567', code, device_info: { platform: 'ios' } });
 
     expect(res.status).toBe(200);
@@ -92,7 +92,7 @@ describe('Auth (e2e)', () => {
     });
 
     const res = await request(app.getHttpServer())
-      .post('/auth/verify-code')
+      .post('/api/v1/auth/verify-code')
       .send({ phone: '+79991234567', code: '9999' });
     expect(res.status).toBe(401);
     const c = await prisma.authCode.findFirst({ where: { phone: '+79991234567' } });
@@ -111,12 +111,12 @@ describe('Auth (e2e)', () => {
       data: { phone: '+79991234567', codeHash, expiresAt: new Date(Date.now() + 60_000) },
     });
     const verify = await request(app.getHttpServer())
-      .post('/auth/verify-code')
+      .post('/api/v1/auth/verify-code')
       .send({ phone: '+79991234567', code: '1234' });
     const oldRefresh = verify.body.refresh_token as string;
 
     const res = await request(app.getHttpServer())
-      .post('/auth/refresh')
+      .post('/api/v1/auth/refresh')
       .send({ refresh_token: oldRefresh });
     expect(res.status).toBe(200);
     expect(res.body.refresh_token).not.toEqual(oldRefresh);
@@ -124,7 +124,7 @@ describe('Auth (e2e)', () => {
 
     // Reusing the old refresh token must fail.
     const reuse = await request(app.getHttpServer())
-      .post('/auth/refresh')
+      .post('/api/v1/auth/refresh')
       .send({ refresh_token: oldRefresh });
     expect(reuse.status).toBe(401);
   });
@@ -141,25 +141,25 @@ describe('Auth (e2e)', () => {
       data: { phone: '+79991234567', codeHash, expiresAt: new Date(Date.now() + 60_000) },
     });
     const verify = await request(app.getHttpServer())
-      .post('/auth/verify-code')
+      .post('/api/v1/auth/verify-code')
       .send({ phone: '+79991234567', code: '1234' });
     const access = verify.body.access_token as string;
     const refresh = verify.body.refresh_token as string;
 
     const res = await request(app.getHttpServer())
-      .post('/auth/logout')
+      .post('/api/v1/auth/logout')
       .set('Authorization', `Bearer ${access}`)
       .send();
     expect(res.status).toBe(204);
 
     const reuse = await request(app.getHttpServer())
-      .post('/auth/refresh')
+      .post('/api/v1/auth/refresh')
       .send({ refresh_token: refresh });
     expect(reuse.status).toBe(401);
   });
 
   it('protected endpoint without Authorization → 401', async () => {
-    const res = await request(app.getHttpServer()).post('/auth/logout').send();
+    const res = await request(app.getHttpServer()).post('/api/v1/auth/logout').send();
     expect(res.status).toBe(401);
   });
 
@@ -169,7 +169,7 @@ describe('Auth (e2e)', () => {
     const results: number[] = [];
     for (let i = 0; i < 6; i++) {
       const phone = `+7999000000${i}`;
-      const res = await request(app.getHttpServer()).post('/auth/request-code').send({ phone });
+      const res = await request(app.getHttpServer()).post('/api/v1/auth/request-code').send({ phone });
       results.push(res.status);
     }
     // First 5 should be 200, the 6th should be 429.

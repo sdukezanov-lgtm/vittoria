@@ -17,13 +17,13 @@ describe('Health (e2e)', () => {
   });
 
   it('GET /healthz → 200 { status: ok }', async () => {
-    const res = await request(app.getHttpServer()).get('/healthz');
+    const res = await request(app.getHttpServer()).get('/api/v1/healthz');
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ status: 'ok' });
   });
 
   it('GET /readyz → 200 with db + redis status', async () => {
-    const res = await request(app.getHttpServer()).get('/readyz');
+    const res = await request(app.getHttpServer()).get('/api/v1/readyz');
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({ status: 'ok', checks: { db: 'ok', redis: 'ok' } });
   });

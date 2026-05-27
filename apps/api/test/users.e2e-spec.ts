@@ -37,7 +37,7 @@ describe('Users (/me) (e2e)', () => {
       data: { phone, codeHash, expiresAt: new Date(Date.now() + 60_000) },
     });
     const res = await request(app.getHttpServer())
-      .post('/auth/verify-code')
+      .post('/api/v1/auth/verify-code')
       .send({ phone, code: '1234' });
     return {
       accessToken: res.body.access_token,
@@ -48,7 +48,7 @@ describe('Users (/me) (e2e)', () => {
 
   it('GET /me returns the current user', async () => {
     const { accessToken } = await login();
-    const res = await request(app.getHttpServer()).get('/me').set('Authorization', `Bearer ${accessToken}`);
+    const res = await request(app.getHttpServer()).get('/api/v1/me').set('Authorization', `Bearer ${accessToken}`);
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({ phone: '+79991234567', role: 'client' });
   });
@@ -56,7 +56,7 @@ describe('Users (/me) (e2e)', () => {
   it('PATCH /me updates first_name / last_name', async () => {
     const { accessToken } = await login();
     const res = await request(app.getHttpServer())
-      .patch('/me')
+      .patch('/api/v1/me')
       .set('Authorization', `Bearer ${accessToken}`)
       .send({ first_name: 'Иван', last_name: 'Иванов' });
     expect(res.status).toBe(200);
@@ -66,7 +66,7 @@ describe('Users (/me) (e2e)', () => {
   it('POST /me/consent → 204 and sets consent_accepted_at', async () => {
     const { accessToken, userId } = await login();
     const res = await request(app.getHttpServer())
-      .post('/me/consent')
+      .post('/api/v1/me/consent')
       .set('Authorization', `Bearer ${accessToken}`)
       .send();
     expect(res.status).toBe(204);
@@ -77,7 +77,7 @@ describe('Users (/me) (e2e)', () => {
   it('DELETE /me anonymizes and revokes sessions', async () => {
     const { accessToken, userId } = await login();
     const res = await request(app.getHttpServer())
-      .delete('/me')
+      .delete('/api/v1/me')
       .set('Authorization', `Bearer ${accessToken}`)
       .send();
     expect(res.status).toBe(204);
