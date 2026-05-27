@@ -3,6 +3,7 @@ import type {
   OrderProgressChangedPayload,
   OrderReadyPayload,
   OrderStageChangedPayload,
+  ChatReplyReceivedPayload,
 } from './notifications.types';
 
 const STAGE_LABELS: Record<string, string> = {
@@ -22,7 +23,11 @@ export interface RenderedMessage {
 
 export function renderTemplate(
   event: NotificationEvent,
-  data: OrderStageChangedPayload | OrderProgressChangedPayload | OrderReadyPayload,
+  data:
+    | OrderStageChangedPayload
+    | OrderProgressChangedPayload
+    | OrderReadyPayload
+    | ChatReplyReceivedPayload,
 ): RenderedMessage {
   switch (event) {
     case 'order.stage.changed': {
@@ -48,6 +53,15 @@ export function renderTemplate(
       return {
         title: 'VITTORIA HOME',
         body: `${order} готов к передаче. Сервисный отдел свяжется с вами.`,
+      };
+    }
+    case 'chat.reply.received': {
+      const p = data as ChatReplyReceivedPayload;
+      const order = p.contractNumber ? `Заказ ${p.contractNumber}` : `Заказ ${p.orderId}`;
+      const tail = p.preview ? ` ${p.preview}` : '';
+      return {
+        title: 'VITTORIA HOME',
+        body: `${order}: новый ответ от сервиса.${tail}`,
       };
     }
   }
