@@ -93,4 +93,48 @@ describe('Admin Orders (e2e)', () => {
       .set('Authorization', `Bearer ${admin.accessToken}`);
     expect(res.status).toBe(404);
   });
+
+  it('PATCH /admin/orders/:id/progress updates stage and percent and writes history', async () => {
+    const admin = await seedUserWithToken(app, { role: 'admin', phone: null });
+    const c1 = await seedUserWithToken(app, { role: 'client' });
+    const order = await prisma.order.create({
+      data: { amocrmDealId: 5301, clientUserId: c1.id, currentStage: 'detailing', progressPercent: 20 },
+    });
+
+    const res = await request(app.getHttpServer())
+      .patch(`/api/v1/admin/orders/${order.id}/progress`)
+      .set('Authorization', `Bearer ${admin.accessToken}`)
+      .send({ stage: 'production', progress_percent: 60, comment: 'On track' });
+    expect(res.status).toBe(200);
+    expect(res.body.current_stage).toBe('production');
+    expect(res.body.progress_percent).toBe(60);
+    expect(res.body.last_admin_comment).toBe('On track');
+
+    const history = await prisma.orderStageHistory.findMany({ where: { orderId: order.id } });
+    expect(history).toHaveLength(1);
+    expect(history[0].stage).toBe('production');
+    expect(history[0].progressPercent).toBe(60);
+    expect(history[0].changedByUserId).toBe(admin.id);
+  });
+
+  it('PATCH /admin/orders/:id/progress rejects invalid stage with 400', async () => {
+    const admin = await seedUserWithToken(app, { role: 'admin', phone: null });
+    const c1 = await seedUserWithToken(app, { role: 'client' });
+    const order = await prisma.order.create({ data: { amocrmDealId: 5302, clientUserId: c1.id } });
+    const res = await request(app.getHttpServer())
+      .patch(`/api/v1/admin/orders/${order.id}/progress`)
+      .set('Authorization', `Bearer ${admin.accessToken}`)
+      .send({ stage: 'not-a-stage' });
+    expect(res.status).toBe(400);
+  });
+
+  it('PATCH /admin/orders/:id/progress requires admin (client gets 403)', async () => {
+    const client = await seedUserWithToken(app, { role: 'client' });
+    const order = await prisma.order.create({ data: { amocrmDealId: 5303, clientUserId: client.id } });
+    const res = await request(app.getHttpServer())
+      .patch(`/api/v1/admin/orders/${order.id}/progress`)
+      .set('Authorization', `Bearer ${client.accessToken}`)
+      .send({ progress_percent: 50 });
+    expect(res.status).toBe(403);
+  });
 });
