@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { ScheduleModule } from '@nestjs/schedule';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ConfigModule } from './config/config.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { RedisModule } from './redis/redis.module';
@@ -22,6 +23,7 @@ import { RolesGuard } from './common/guards/roles.guard';
     PrismaModule,
     RedisModule,
     ScheduleModule.forRoot(),
+    EventEmitterModule.forRoot(),
     QueuesModule,
     AuditModule,
     AuthModule,

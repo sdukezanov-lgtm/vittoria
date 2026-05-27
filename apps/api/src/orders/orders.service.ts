@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Queue } from 'bullmq';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
@@ -19,6 +20,7 @@ export class OrdersService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     @InjectQueue(QUEUE_AMOCRM_OUTBOUND) private readonly outQueue: Queue,
+    private readonly events: EventEmitter2,
   ) {}
 
   async updateProgress(orderId: string, input: UpdateProgressInput): Promise<void> {
@@ -69,6 +71,21 @@ export class OrdersService {
       },
       { jobId: `${orderId}_${Date.now()}` },
     );
+
+    this.events.emit('order.progress.updated', {
+      orderId,
+      clientUserId: order.clientUserId,
+      before: {
+        stage: order.currentStage,
+        progressPercent: order.progressPercent,
+      },
+      after: {
+        stage: input.stage ?? order.currentStage,
+        progressPercent: input.progressPercent ?? order.progressPercent,
+      },
+      contractNumber: order.contractNumber,
+      productName: order.productName,
+    });
   }
 
   async listForClient(clientUserId: string): Promise<Order[]> {

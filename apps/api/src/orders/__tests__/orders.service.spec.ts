@@ -7,9 +7,12 @@ describe('OrdersService.updateProgress (unit)', () => {
         findUnique: jest.fn().mockResolvedValue({
           id: 'ord1',
           amocrmDealId: 555,
+          clientUserId: 'client1',
           currentStage: 'detailing',
           progressPercent: 10,
           lastAdminComment: null,
+          contractNumber: 'C-1',
+          productName: 'Kitchen',
         }),
         update: jest.fn().mockResolvedValue({}),
       },
@@ -19,13 +22,14 @@ describe('OrdersService.updateProgress (unit)', () => {
     } as any;
     const audit = { record: jest.fn().mockResolvedValue(undefined) };
     const outQueue = { add: jest.fn().mockResolvedValue({}) };
-    return { prisma, audit, outQueue };
+    const events = { emit: jest.fn() };
+    return { prisma, audit, outQueue, events };
   };
 
-  it('updates order, writes history, enqueues outbound job', async () => {
-    const { prisma, audit, outQueue } = makeDeps();
+  it('updates order, writes history, enqueues outbound job, emits event', async () => {
+    const { prisma, audit, outQueue, events } = makeDeps();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const svc = new OrdersService(prisma, audit as any, outQueue as any);
+    const svc = new OrdersService(prisma, audit as any, outQueue as any, events as any);
     await svc.updateProgress('ord1', { stage: 'production', progressPercent: 50, actorUserId: 'admin1' });
 
     expect(prisma.order.update).toHaveBeenCalledWith(expect.objectContaining({
@@ -38,6 +42,10 @@ describe('OrdersService.updateProgress (unit)', () => {
       'push',
       expect.objectContaining({ amocrmDealId: 555, stage: 'production', progressPercent: 50 }),
       expect.any(Object),
+    );
+    expect(events.emit).toHaveBeenCalledWith(
+      'order.progress.updated',
+      expect.objectContaining({ orderId: 'ord1' }),
     );
   });
 });
@@ -59,13 +67,14 @@ describe('OrdersService read methods (unit)', () => {
     } as any;
     const audit = { record: jest.fn() };
     const outQueue = { add: jest.fn() };
-    return { prisma, audit, outQueue };
+    const events = { emit: jest.fn() };
+    return { prisma, audit, outQueue, events };
   };
 
   it('listForClient filters by clientUserId', async () => {
-    const { prisma, audit, outQueue } = makeDeps();
+    const { prisma, audit, outQueue, events } = makeDeps();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const svc = new OrdersService(prisma, audit as any, outQueue as any);
+    const svc = new OrdersService(prisma, audit as any, outQueue as any, events as any);
     await svc.listForClient('u1');
     expect(prisma.order.findMany).toHaveBeenCalledWith({
       where: { clientUserId: 'u1' },
@@ -74,9 +83,9 @@ describe('OrdersService read methods (unit)', () => {
   });
 
   it('listAll applies search + stage filters and paginates', async () => {
-    const { prisma, audit, outQueue } = makeDeps();
+    const { prisma, audit, outQueue, events } = makeDeps();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const svc = new OrdersService(prisma, audit as any, outQueue as any);
+    const svc = new OrdersService(prisma, audit as any, outQueue as any, events as any);
     const result = await svc.listAll({ search: 'kit', stage: 'production', page: 2, pageSize: 5 });
     expect(prisma.order.findMany).toHaveBeenCalledWith(expect.objectContaining({
       where: expect.objectContaining({ currentStage: 'production', OR: expect.any(Array) }),
@@ -87,17 +96,17 @@ describe('OrdersService read methods (unit)', () => {
   });
 
   it('findByIdForClient scopes the lookup', async () => {
-    const { prisma, audit, outQueue } = makeDeps();
+    const { prisma, audit, outQueue, events } = makeDeps();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const svc = new OrdersService(prisma, audit as any, outQueue as any);
+    const svc = new OrdersService(prisma, audit as any, outQueue as any, events as any);
     await svc.findByIdForClient('o1', 'u1');
     expect(prisma.order.findFirst).toHaveBeenCalledWith({ where: { id: 'o1', clientUserId: 'u1' } });
   });
 
   it('getHistory orders by changedAt desc', async () => {
-    const { prisma, audit, outQueue } = makeDeps();
+    const { prisma, audit, outQueue, events } = makeDeps();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const svc = new OrdersService(prisma, audit as any, outQueue as any);
+    const svc = new OrdersService(prisma, audit as any, outQueue as any, events as any);
     await svc.getHistory('o1');
     expect(prisma.orderStageHistory.findMany).toHaveBeenCalledWith({
       where: { orderId: 'o1' },
