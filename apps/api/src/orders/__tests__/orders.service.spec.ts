@@ -22,7 +22,7 @@ describe('OrdersService.updateProgress (unit)', () => {
     } as any;
     const audit = { record: jest.fn().mockResolvedValue(undefined) };
     const outQueue = { add: jest.fn().mockResolvedValue({}) };
-    const events = { emit: jest.fn() };
+    const events = { emit: jest.fn(), emitAsync: jest.fn().mockResolvedValue([]) };
     return { prisma, audit, outQueue, events };
   };
 
@@ -43,7 +43,7 @@ describe('OrdersService.updateProgress (unit)', () => {
       expect.objectContaining({ amocrmDealId: 555, stage: 'production', progressPercent: 50 }),
       expect.any(Object),
     );
-    expect(events.emit).toHaveBeenCalledWith(
+    expect(events.emitAsync).toHaveBeenCalledWith(
       'order.progress.updated',
       expect.objectContaining({ orderId: 'ord1' }),
     );
@@ -67,7 +67,7 @@ describe('OrdersService read methods (unit)', () => {
     } as any;
     const audit = { record: jest.fn() };
     const outQueue = { add: jest.fn() };
-    const events = { emit: jest.fn() };
+    const events = { emit: jest.fn(), emitAsync: jest.fn().mockResolvedValue([]) };
     return { prisma, audit, outQueue, events };
   };
 

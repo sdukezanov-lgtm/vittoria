@@ -33,7 +33,7 @@ export class NotificationsService {
     await this.queue.add(
       'dispatch',
       { userId, event, data },
-      { delay, jobId: `${userId}:${event}:${data.orderId}:${Date.now()}` },
+      { delay, jobId: `${userId}_${event}_${data.orderId}_${Date.now()}` },
     );
   }
 }

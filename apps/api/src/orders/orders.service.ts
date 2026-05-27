@@ -72,7 +72,7 @@ export class OrdersService {
       { jobId: `${orderId}_${Date.now()}` },
     );
 
-    this.events.emit('order.progress.updated', {
+    await this.events.emitAsync('order.progress.updated', {
       orderId,
       clientUserId: order.clientUserId,
       before: {
