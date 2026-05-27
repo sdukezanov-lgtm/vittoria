@@ -13,7 +13,7 @@ export class AuthController {
   constructor(private readonly auth: AuthService) {}
 
   @Public()
-  @Throttle({ global: { limit: 5, ttl: 60_000 } })
+  @Throttle({ global: { limit: 5, ttl: 3_600_000 } })
   @Post('request-code')
   @HttpCode(200)
   async requestCode(@Body() dto: RequestCodeDto): Promise<{ retry_after_sec: number }> {
