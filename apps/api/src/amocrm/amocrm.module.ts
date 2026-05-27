@@ -5,6 +5,7 @@ import { AmocrmMockClient } from './amocrm-mock.client';
 import { AmocrmMapper } from './amocrm-mapper';
 import { AmocrmIdempotencyService } from './amocrm-idempotency.service';
 import { AmocrmWebhookGuard } from './amocrm-webhook.guard';
+import { AmocrmSyncService } from './amocrm-sync.service';
 import { AMOCRM_CLIENT } from './amocrm.types';
 
 @Module({
@@ -15,6 +16,7 @@ import { AMOCRM_CLIENT } from './amocrm.types';
     AmocrmHttpClient,
     AmocrmIdempotencyService,
     AmocrmWebhookGuard,
+    AmocrmSyncService,
     {
       provide: AMOCRM_CLIENT,
       inject: [AmocrmConfig, AmocrmMockClient, AmocrmHttpClient],
@@ -22,6 +24,6 @@ import { AMOCRM_CLIENT } from './amocrm.types';
         cfg.mode === 'mock' ? mock : http,
     },
   ],
-  exports: [AMOCRM_CLIENT, AmocrmConfig, AmocrmMapper, AmocrmMockClient, AmocrmIdempotencyService, AmocrmWebhookGuard],
+  exports: [AMOCRM_CLIENT, AmocrmConfig, AmocrmMapper, AmocrmMockClient, AmocrmIdempotencyService, AmocrmWebhookGuard, AmocrmSyncService],
 })
 export class AmocrmModule {}
