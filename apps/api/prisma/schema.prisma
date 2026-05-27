@@ -31,6 +31,7 @@ model User {
   clientOrders  Order[]     @relation("ClientOrders")
   partnerOrders Order[]     @relation("PartnerOrders")
   pushTokens    PushToken[]
+  sentMessages  Message[]
 
   @@map("users")
 }
@@ -98,6 +99,7 @@ model Order {
   client  User                @relation("ClientOrders", fields: [clientUserId], references: [id], onDelete: Cascade)
   partner User?               @relation("PartnerOrders", fields: [partnerUserId], references: [id], onDelete: SetNull)
   history OrderStageHistory[]
+  chat    Chat?
 
   @@index([clientUserId])
   @@index([partnerUserId])
@@ -138,6 +140,40 @@ model PushToken {
   @@unique([userId, deviceId])
   @@index([userId])
   @@map("push_tokens")
+}
+
+enum MessageSenderRole {
+  client
+  admin
+}
+
+model Chat {
+  id        String   @id @default(uuid()) @db.Uuid
+  orderId   String   @unique @map("order_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  order    Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  messages Message[]
+
+  @@map("chats")
+}
+
+model Message {
+  id           String            @id @default(uuid()) @db.Uuid
+  chatId       String            @map("chat_id") @db.Uuid
+  senderUserId String            @map("sender_user_id") @db.Uuid
+  senderRole   MessageSenderRole @map("sender_role")
+  text         String?
+  attachments  Json              @default("[]")
+  readAt       DateTime?         @map("read_at")
+  redactedAt   DateTime?         @map("redacted_at")
+  createdAt    DateTime          @default(now()) @map("created_at")
+
+  chat   Chat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  sender User @relation(fields: [senderUserId], references: [id])
+
+  @@index([chatId, createdAt(sort: Desc)])
+  @@map("messages")
 }
 
 model AuditLog {
