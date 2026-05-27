@@ -10,6 +10,7 @@ import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
 import { AmocrmModule } from './amocrm/amocrm.module';
 import { OrdersModule } from './orders/orders.module';
+import { NotificationsModule } from './notifications/notifications.module';
 import { UsersModule } from './users/users.module';
 import { HealthModule } from './health/health.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
@@ -26,6 +27,7 @@ import { RolesGuard } from './common/guards/roles.guard';
     AuthModule,
     AmocrmModule,
     OrdersModule,
+    NotificationsModule,
     UsersModule,
     HealthModule,
     ThrottlerModule.forRoot([{ name: 'global', ttl: 60_000, limit: 60 }]),
