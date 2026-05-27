@@ -4,7 +4,7 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { AuthUser } from '../common/types/auth-user';
 import { OrdersService } from './orders.service';
 import { OrdersMapper } from './orders.mapper';
-import type { OrderResponse } from './dto/order.dto';
+import type { OrderResponse, OrderStageHistoryEntry, PartnerServiceItem } from './dto/order.dto';
 
 @Controller('orders')
 @Roles('client')
@@ -28,5 +28,26 @@ export class OrdersController {
     const order = await this.orders.findByIdForClient(id, user.id);
     if (!order) throw new NotFoundException({ code: 'ORDER_NOT_FOUND', message: 'Order not found' });
     return this.mapper.toResponse(order);
+  }
+
+  @Get(':id/history')
+  async history(
+    @CurrentUser() user: AuthUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<{ items: OrderStageHistoryEntry[] }> {
+    const order = await this.orders.findByIdForClient(id, user.id);
+    if (!order) throw new NotFoundException({ code: 'ORDER_NOT_FOUND', message: 'Order not found' });
+    const rows = await this.orders.getHistory(id);
+    return { items: rows.map((r) => this.mapper.toHistoryEntry(r)) };
+  }
+
+  @Get(':id/partner-services')
+  async partnerServices(
+    @CurrentUser() user: AuthUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<{ items: PartnerServiceItem[] }> {
+    const order = await this.orders.findByIdForClient(id, user.id);
+    if (!order) throw new NotFoundException({ code: 'ORDER_NOT_FOUND', message: 'Order not found' });
+    return { items: this.mapper.toResponse(order).partner_services };
   }
 }
