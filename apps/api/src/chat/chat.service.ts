@@ -1,5 +1,5 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import type { Message, MessageSenderRole } from '@prisma/client';
+import type { Chat, Message, MessageSenderRole, Order } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { AuditService } from '../audit/audit.service';
@@ -94,7 +94,10 @@ export class ChatService {
     });
   }
 
-  private async assertChatAccess(chatId: string, requester: AuthUser): Promise<void> {
+  private async assertChatAccess(
+    chatId: string,
+    requester: AuthUser,
+  ): Promise<Chat & { order: Order }> {
     const chat = await this.prisma.chat.findUnique({
       where: { id: chatId },
       include: { order: true },
@@ -105,19 +108,11 @@ export class ChatService {
     if (requester.role === 'client' && chat.order.clientUserId !== requester.id) {
       throw new NotFoundException({ code: 'CHAT_NOT_FOUND', message: 'Chat not found' });
     }
+    return chat;
   }
 
   async sendMessage(chatId: string, requester: AuthUser, args: SendMessageArgs): Promise<Message> {
-    const chat = await this.prisma.chat.findUnique({
-      where: { id: chatId },
-      include: { order: true },
-    });
-    if (!chat) {
-      throw new NotFoundException({ code: 'CHAT_NOT_FOUND', message: 'Chat not found' });
-    }
-    if (requester.role === 'client' && chat.order.clientUserId !== requester.id) {
-      throw new NotFoundException({ code: 'CHAT_NOT_FOUND', message: 'Chat not found' });
-    }
+    const chat = await this.assertChatAccess(chatId, requester);
 
     const senderRole: MessageSenderRole = requester.role === 'admin' ? 'admin' : 'client';
     const message = await this.prisma.message.create({
@@ -180,13 +175,13 @@ export class ChatService {
     const page = Math.max(1, args.page ?? 1);
     const pageSize = Math.min(100, Math.max(1, args.page_size ?? 20));
     const where = args.has_unread
-      ? { messages: { some: { senderRole: 'client' as MessageSenderRole, readAt: null } } }
+      ? { messages: { some: { senderRole: 'client', readAt: null } } }
       : {};
 
     const [rows, total] = await Promise.all([
       this.prisma.chat.findMany({
         where,
-        orderBy: [{ createdAt: 'desc' }],
+        orderBy: { createdAt: 'desc' },
         skip: (page - 1) * pageSize,
         take: pageSize,
         include: {
