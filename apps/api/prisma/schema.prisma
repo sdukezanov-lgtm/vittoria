@@ -28,8 +28,9 @@ model User {
 
   authCodes     AuthCode[]
   sessions      Session[]
-  clientOrders  Order[]    @relation("ClientOrders")
-  partnerOrders Order[]    @relation("PartnerOrders")
+  clientOrders  Order[]     @relation("ClientOrders")
+  partnerOrders Order[]     @relation("PartnerOrders")
+  pushTokens    PushToken[]
 
   @@map("users")
 }
@@ -116,6 +117,27 @@ model OrderStageHistory {
 
   @@index([orderId, changedAt(sort: Desc)])
   @@map("order_stage_history")
+}
+
+enum PushPlatform {
+  ios
+  android
+}
+
+model PushToken {
+  id        String       @id @default(uuid()) @db.Uuid
+  userId    String       @map("user_id") @db.Uuid
+  platform  PushPlatform
+  token     String
+  deviceId  String       @map("device_id")
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, deviceId])
+  @@index([userId])
+  @@map("push_tokens")
 }
 
 model AuditLog {
