@@ -4,7 +4,7 @@ import { Queue } from 'bullmq';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { QUEUE_AMOCRM_OUTBOUND } from '../queues/queue-names';
-import type { OrderStage } from '@prisma/client';
+import type { Order, OrderStage, OrderStageHistory, Prisma } from '@prisma/client';
 
 export interface UpdateProgressInput {
   stage?: OrderStage;
@@ -69,5 +69,64 @@ export class OrdersService {
       },
       { jobId: `${orderId}_${Date.now()}` },
     );
+  }
+
+  async listForClient(clientUserId: string): Promise<Order[]> {
+    return this.prisma.order.findMany({
+      where: { clientUserId },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async listForPartner(partnerUserId: string): Promise<Order[]> {
+    return this.prisma.order.findMany({
+      where: { partnerUserId },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async listAll(query: { search?: string; stage?: OrderStage; page?: number; pageSize?: number }): Promise<{ rows: Order[]; total: number }> {
+    const page = Math.max(1, query.page ?? 1);
+    const pageSize = Math.min(100, Math.max(1, query.pageSize ?? 20));
+
+    const where: Prisma.OrderWhereInput = {};
+    if (query.stage) where.currentStage = query.stage;
+    if (query.search) {
+      where.OR = [
+        { contractNumber: { contains: query.search, mode: 'insensitive' } },
+        { productName: { contains: query.search, mode: 'insensitive' } },
+      ];
+    }
+
+    const [rows, total] = await this.prisma.$transaction([
+      this.prisma.order.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      this.prisma.order.count({ where }),
+    ]);
+
+    return { rows, total };
+  }
+
+  async findById(id: string): Promise<Order | null> {
+    return this.prisma.order.findUnique({ where: { id } });
+  }
+
+  async findByIdForClient(id: string, clientUserId: string): Promise<Order | null> {
+    return this.prisma.order.findFirst({ where: { id, clientUserId } });
+  }
+
+  async findByIdForPartner(id: string, partnerUserId: string): Promise<Order | null> {
+    return this.prisma.order.findFirst({ where: { id, partnerUserId } });
+  }
+
+  async getHistory(orderId: string): Promise<OrderStageHistory[]> {
+    return this.prisma.orderStageHistory.findMany({
+      where: { orderId },
+      orderBy: { changedAt: 'desc' },
+    });
   }
 }

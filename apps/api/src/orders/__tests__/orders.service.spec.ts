@@ -41,3 +41,67 @@ describe('OrdersService.updateProgress (unit)', () => {
     );
   });
 });
+
+describe('OrdersService read methods (unit)', () => {
+  const makeDeps = () => {
+    const prisma = {
+      order: {
+        findMany: jest.fn().mockResolvedValue([{ id: 'o1' }]),
+        count: jest.fn().mockResolvedValue(1),
+        findUnique: jest.fn(),
+        findFirst: jest.fn(),
+      },
+      orderStageHistory: {
+        findMany: jest.fn().mockResolvedValue([{ id: 'h1' }]),
+      },
+      $transaction: jest.fn(async (ops: Promise<unknown>[]) => Promise.all(ops)),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any;
+    const audit = { record: jest.fn() };
+    const outQueue = { add: jest.fn() };
+    return { prisma, audit, outQueue };
+  };
+
+  it('listForClient filters by clientUserId', async () => {
+    const { prisma, audit, outQueue } = makeDeps();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const svc = new OrdersService(prisma, audit as any, outQueue as any);
+    await svc.listForClient('u1');
+    expect(prisma.order.findMany).toHaveBeenCalledWith({
+      where: { clientUserId: 'u1' },
+      orderBy: { createdAt: 'desc' },
+    });
+  });
+
+  it('listAll applies search + stage filters and paginates', async () => {
+    const { prisma, audit, outQueue } = makeDeps();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const svc = new OrdersService(prisma, audit as any, outQueue as any);
+    const result = await svc.listAll({ search: 'kit', stage: 'production', page: 2, pageSize: 5 });
+    expect(prisma.order.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ currentStage: 'production', OR: expect.any(Array) }),
+      skip: 5,
+      take: 5,
+    }));
+    expect(result.total).toBe(1);
+  });
+
+  it('findByIdForClient scopes the lookup', async () => {
+    const { prisma, audit, outQueue } = makeDeps();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const svc = new OrdersService(prisma, audit as any, outQueue as any);
+    await svc.findByIdForClient('o1', 'u1');
+    expect(prisma.order.findFirst).toHaveBeenCalledWith({ where: { id: 'o1', clientUserId: 'u1' } });
+  });
+
+  it('getHistory orders by changedAt desc', async () => {
+    const { prisma, audit, outQueue } = makeDeps();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const svc = new OrdersService(prisma, audit as any, outQueue as any);
+    await svc.getHistory('o1');
+    expect(prisma.orderStageHistory.findMany).toHaveBeenCalledWith({
+      where: { orderId: 'o1' },
+      orderBy: { changedAt: 'desc' },
+    });
+  });
+});
