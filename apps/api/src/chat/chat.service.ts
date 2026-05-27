@@ -175,7 +175,7 @@ export class ChatService {
     const page = Math.max(1, args.page ?? 1);
     const pageSize = Math.min(100, Math.max(1, args.page_size ?? 20));
     const where = args.has_unread
-      ? { messages: { some: { senderRole: 'client', readAt: null } } }
+      ? { messages: { some: { senderRole: 'client' as MessageSenderRole, readAt: null } } }
       : {};
 
     const [rows, total] = await Promise.all([
