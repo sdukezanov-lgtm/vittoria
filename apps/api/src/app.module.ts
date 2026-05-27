@@ -5,12 +5,13 @@ import { PrismaModule } from './prisma/prisma.module';
 import { RedisModule } from './redis/redis.module';
 import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
+import { UsersModule } from './users/users.module';
 import { HealthModule } from './health/health.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 
 @Module({
-  imports: [ConfigModule, PrismaModule, RedisModule, AuditModule, AuthModule, HealthModule],
+  imports: [ConfigModule, PrismaModule, RedisModule, AuditModule, AuthModule, UsersModule, HealthModule],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
