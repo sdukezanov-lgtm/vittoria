@@ -93,4 +93,63 @@ describe('Auth (e2e)', () => {
     const c = await prisma.authCode.findFirst({ where: { phone: '+79991234567' } });
     expect(c?.attempts).toBe(1);
   });
+
+  it('POST /auth/refresh rotates refresh token and revokes the old session', async () => {
+    const bcrypt = await import('bcrypt');
+    const codeHash = await bcrypt.hash('1234', 10);
+    await prisma.user.upsert({
+      where: { phone: '+79991234567' },
+      update: {},
+      create: { phone: '+79991234567' },
+    });
+    await prisma.authCode.create({
+      data: { phone: '+79991234567', codeHash, expiresAt: new Date(Date.now() + 60_000) },
+    });
+    const verify = await request(app.getHttpServer())
+      .post('/auth/verify-code')
+      .send({ phone: '+79991234567', code: '1234' });
+    const oldRefresh = verify.body.refresh_token as string;
+
+    const res = await request(app.getHttpServer())
+      .post('/auth/refresh')
+      .send({ refresh_token: oldRefresh });
+    expect(res.status).toBe(200);
+    expect(res.body.refresh_token).not.toEqual(oldRefresh);
+    expect(typeof res.body.access_token).toBe('string');
+
+    // Reusing the old refresh token must fail.
+    const reuse = await request(app.getHttpServer())
+      .post('/auth/refresh')
+      .send({ refresh_token: oldRefresh });
+    expect(reuse.status).toBe(401);
+  });
+
+  it('POST /auth/logout revokes the session', async () => {
+    const bcrypt = await import('bcrypt');
+    const codeHash = await bcrypt.hash('1234', 10);
+    await prisma.user.upsert({
+      where: { phone: '+79991234567' },
+      update: {},
+      create: { phone: '+79991234567' },
+    });
+    await prisma.authCode.create({
+      data: { phone: '+79991234567', codeHash, expiresAt: new Date(Date.now() + 60_000) },
+    });
+    const verify = await request(app.getHttpServer())
+      .post('/auth/verify-code')
+      .send({ phone: '+79991234567', code: '1234' });
+    const access = verify.body.access_token as string;
+    const refresh = verify.body.refresh_token as string;
+
+    const res = await request(app.getHttpServer())
+      .post('/auth/logout')
+      .set('Authorization', `Bearer ${access}`)
+      .send();
+    expect(res.status).toBe(204);
+
+    const reuse = await request(app.getHttpServer())
+      .post('/auth/refresh')
+      .send({ refresh_token: refresh });
+    expect(reuse.status).toBe(401);
+  });
 });

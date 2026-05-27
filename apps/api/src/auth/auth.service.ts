@@ -133,4 +133,56 @@ export class AuthService {
       user: { id: user.id, phone: user.phone!, role: user.role },
     };
   }
+
+  async refresh(refreshToken: string): Promise<{ accessToken: string; refreshToken: string }> {
+    const refreshTtlSec = this.config.get('JWT_REFRESH_TTL_SEC', { infer: true });
+
+    let claims;
+    try {
+      claims = await this.tokens.verifyRefresh(refreshToken);
+    } catch {
+      throw new UnauthorizedException({ code: 'REFRESH_INVALID', message: 'invalid refresh token' });
+    }
+
+    const session = await this.prisma.session.findUnique({ where: { id: claims.jti } });
+    if (!session || session.revokedAt || session.expiresAt < new Date()) {
+      throw new UnauthorizedException({ code: 'REFRESH_REVOKED', message: 'session revoked' });
+    }
+    const matches = await bcrypt.compare(refreshToken, session.refreshTokenHash);
+    if (!matches) {
+      // Possible token reuse — revoke session as safety measure.
+      await this.prisma.session.update({ where: { id: session.id }, data: { revokedAt: new Date() } });
+      throw new UnauthorizedException({ code: 'REFRESH_INVALID', message: 'invalid refresh token' });
+    }
+
+    const user = await this.prisma.user.findUniqueOrThrow({ where: { id: session.userId } });
+    const newJti = randomUUID();
+    const issued = await this.tokens.issue({ userId: user.id, role: user.role, jti: newJti });
+    const newHash = await bcrypt.hash(issued.refreshToken, 10);
+
+    await this.prisma.$transaction([
+      this.prisma.session.update({
+        where: { id: session.id },
+        data: { revokedAt: new Date() },
+      }),
+      this.prisma.session.create({
+        data: {
+          id: newJti,
+          userId: user.id,
+          refreshTokenHash: newHash,
+          deviceInfo: session.deviceInfo as object,
+          expiresAt: new Date(Date.now() + refreshTtlSec * 1000),
+        },
+      }),
+    ]);
+
+    return { accessToken: issued.accessToken, refreshToken: issued.refreshToken };
+  }
+
+  async logout(sessionId: string): Promise<void> {
+    await this.prisma.session.update({
+      where: { id: sessionId },
+      data: { revokedAt: new Date() },
+    });
+  }
 }
