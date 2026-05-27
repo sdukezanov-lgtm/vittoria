@@ -1,5 +1,5 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import type { Message } from '@prisma/client';
+import type { Message, MessageSenderRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { AuditService } from '../audit/audit.service';
@@ -15,6 +15,31 @@ export interface ChatSummary {
 export interface ListMessagesArgs {
   before?: string;
   limit?: number;
+}
+
+export interface SendMessageArgs {
+  text: string;
+}
+
+export interface AdminChatListItem {
+  chat_id: string;
+  order_id: string;
+  contract_number: string | null;
+  last_message_at: Date | null;
+  unread_count: number;
+}
+
+export interface AdminChatListResult {
+  rows: AdminChatListItem[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+export interface ListAdminChatsArgs {
+  has_unread?: boolean;
+  page?: number;
+  page_size?: number;
 }
 
 @Injectable()
@@ -80,5 +105,118 @@ export class ChatService {
     if (requester.role === 'client' && chat.order.clientUserId !== requester.id) {
       throw new NotFoundException({ code: 'CHAT_NOT_FOUND', message: 'Chat not found' });
     }
+  }
+
+  async sendMessage(chatId: string, requester: AuthUser, args: SendMessageArgs): Promise<Message> {
+    const chat = await this.prisma.chat.findUnique({
+      where: { id: chatId },
+      include: { order: true },
+    });
+    if (!chat) {
+      throw new NotFoundException({ code: 'CHAT_NOT_FOUND', message: 'Chat not found' });
+    }
+    if (requester.role === 'client' && chat.order.clientUserId !== requester.id) {
+      throw new NotFoundException({ code: 'CHAT_NOT_FOUND', message: 'Chat not found' });
+    }
+
+    const senderRole: MessageSenderRole = requester.role === 'admin' ? 'admin' : 'client';
+    const message = await this.prisma.message.create({
+      data: {
+        chatId,
+        senderUserId: requester.id,
+        senderRole,
+        text: args.text,
+      },
+    });
+
+    await this.audit.record({
+      actorUserId: requester.id,
+      action: 'chat.message.sent',
+      entity: 'Message',
+      entityId: message.id,
+      after: { chatId, senderRole },
+    });
+
+    if (senderRole === 'admin') {
+      const preview = (args.text ?? '').replace(/[\r\n]+/g, ' ').trim().slice(0, 80) || null;
+      try {
+        await this.notifications.send(chat.order.clientUserId, 'chat.reply.received', {
+          orderId: chat.orderId,
+          chatId,
+          contractNumber: chat.order.contractNumber,
+          preview,
+        });
+      } catch (err) {
+        this.logger.warn(`chat.reply.received notify failed: ${(err as Error).message}`);
+      }
+    }
+
+    return message;
+  }
+
+  async markRead(
+    chatId: string,
+    requester: AuthUser,
+    upToMessageId: string,
+  ): Promise<{ updated: number }> {
+    await this.assertChatAccess(chatId, requester);
+    const cursor = await this.prisma.message.findUnique({ where: { id: upToMessageId } });
+    if (!cursor || cursor.chatId !== chatId) {
+      throw new NotFoundException({ code: 'MESSAGE_NOT_FOUND', message: 'Message not found' });
+    }
+    const result = await this.prisma.message.updateMany({
+      where: {
+        chatId,
+        createdAt: { lte: cursor.createdAt },
+        senderUserId: { not: requester.id },
+        readAt: null,
+      },
+      data: { readAt: new Date() },
+    });
+    return { updated: result.count };
+  }
+
+  async listAdminChats(args: ListAdminChatsArgs): Promise<AdminChatListResult> {
+    const page = Math.max(1, args.page ?? 1);
+    const pageSize = Math.min(100, Math.max(1, args.page_size ?? 20));
+    const where = args.has_unread
+      ? { messages: { some: { senderRole: 'client' as MessageSenderRole, readAt: null } } }
+      : {};
+
+    const [rows, total] = await Promise.all([
+      this.prisma.chat.findMany({
+        where,
+        orderBy: [{ createdAt: 'desc' }],
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+        include: {
+          order: { select: { id: true, contractNumber: true } },
+          messages: {
+            orderBy: { createdAt: 'desc' },
+            take: 1,
+            select: { createdAt: true },
+          },
+          _count: {
+            select: {
+              messages: { where: { senderRole: 'client', readAt: null } },
+            },
+          },
+        },
+      }),
+      this.prisma.chat.count({ where }),
+    ]);
+
+    return {
+      rows: rows.map((r) => ({
+        chat_id: r.id,
+        order_id: r.orderId,
+        contract_number: r.order.contractNumber,
+        last_message_at: r.messages[0]?.createdAt ?? null,
+        unread_count: r._count.messages,
+      })),
+      total,
+      page,
+      page_size: pageSize,
+    };
   }
 }

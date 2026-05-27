@@ -133,3 +133,210 @@ describe('ChatService.listMessages', () => {
     ).rejects.toMatchObject({ status: 404 });
   });
 });
+
+describe('ChatService.sendMessage', () => {
+  const makePrisma = (overrides: Record<string, unknown> = {}) => ({
+    chat: {
+      findUnique: jest.fn().mockResolvedValue({
+        id: CHAT_ID,
+        orderId: ORDER_ID,
+        order: { id: ORDER_ID, clientUserId: CLIENT_ID, contractNumber: 'C-100', productName: 'Kitchen' },
+      }),
+    },
+    message: {
+      create: jest.fn().mockImplementation(async ({ data }) => ({
+        id: 'msg-new',
+        chatId: data.chatId,
+        senderUserId: data.senderUserId,
+        senderRole: data.senderRole,
+        text: data.text,
+        attachments: [],
+        readAt: null,
+        redactedAt: null,
+        createdAt: new Date(),
+      })),
+    },
+    ...overrides,
+  });
+
+  it('admin sender → triggers notifications.send with preview', async () => {
+    const prisma = makePrisma();
+    const notifications = { send: jest.fn().mockResolvedValue(undefined) };
+    const audit = { record: jest.fn().mockResolvedValue(undefined) };
+    const svc = new ChatService(prisma as never, notifications as never, audit as never);
+    await svc.sendMessage(
+      CHAT_ID,
+      { id: ADMIN_ID, role: 'admin' } as never,
+      { text: 'Привет, готовы к встрече?' },
+    );
+    expect(notifications.send).toHaveBeenCalledWith(
+      CLIENT_ID,
+      'chat.reply.received',
+      expect.objectContaining({
+        orderId: ORDER_ID,
+        chatId: CHAT_ID,
+        contractNumber: 'C-100',
+        preview: 'Привет, готовы к встрече?',
+      }),
+    );
+  });
+
+  it('admin sender → trims preview to 80 chars without line breaks', async () => {
+    const prisma = makePrisma();
+    const notifications = { send: jest.fn().mockResolvedValue(undefined) };
+    const audit = { record: jest.fn().mockResolvedValue(undefined) };
+    const svc = new ChatService(prisma as never, notifications as never, audit as never);
+    const longText = 'A'.repeat(200) + '\nB';
+    await svc.sendMessage(CHAT_ID, { id: ADMIN_ID, role: 'admin' } as never, { text: longText });
+    const payload = notifications.send.mock.calls[0][2];
+    expect(payload.preview.length).toBeLessThanOrEqual(80);
+    expect(payload.preview).not.toContain('\n');
+  });
+
+  it('client sender → does NOT trigger notifications', async () => {
+    const prisma = makePrisma();
+    const notifications = { send: jest.fn() };
+    const audit = { record: jest.fn().mockResolvedValue(undefined) };
+    const svc = new ChatService(prisma as never, notifications as never, audit as never);
+    await svc.sendMessage(
+      CHAT_ID,
+      { id: CLIENT_ID, role: 'client' } as never,
+      { text: 'Здравствуйте' },
+    );
+    expect(notifications.send).not.toHaveBeenCalled();
+  });
+
+  it('notifications.send throws → sendMessage still succeeds (message saved)', async () => {
+    const prisma = makePrisma();
+    const notifications = { send: jest.fn().mockRejectedValue(new Error('queue down')) };
+    const audit = { record: jest.fn().mockResolvedValue(undefined) };
+    const svc = new ChatService(prisma as never, notifications as never, audit as never);
+    const result = await svc.sendMessage(
+      CHAT_ID,
+      { id: ADMIN_ID, role: 'admin' } as never,
+      { text: 'Test' },
+    );
+    expect(result.id).toBe('msg-new');
+    expect(prisma.message.create).toHaveBeenCalled();
+  });
+
+  it('client sending into chat not owned → 404', async () => {
+    const prisma = makePrisma({
+      chat: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: CHAT_ID,
+          orderId: ORDER_ID,
+          order: { id: ORDER_ID, clientUserId: 'someone-else', contractNumber: null, productName: null },
+        }),
+      },
+    });
+    const notifications = { send: jest.fn() };
+    const audit = { record: jest.fn().mockResolvedValue(undefined) };
+    const svc = new ChatService(prisma as never, notifications as never, audit as never);
+    await expect(
+      svc.sendMessage(CHAT_ID, { id: CLIENT_ID, role: 'client' } as never, { text: 'x' }),
+    ).rejects.toMatchObject({ status: 404 });
+    expect(prisma.message.create).not.toHaveBeenCalled();
+  });
+});
+
+describe('ChatService.markRead', () => {
+  it('marks only messages NOT sent by requester, up to cursor created_at', async () => {
+    const cursorDate = new Date('2026-05-28T12:00:00Z');
+    const prisma = {
+      chat: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: CHAT_ID,
+          orderId: ORDER_ID,
+          order: { id: ORDER_ID, clientUserId: CLIENT_ID },
+        }),
+      },
+      message: {
+        findUnique: jest.fn().mockResolvedValue({ id: 'msg-cursor', chatId: CHAT_ID, createdAt: cursorDate }),
+        updateMany: jest.fn().mockResolvedValue({ count: 4 }),
+      },
+    };
+    const svc = new ChatService(prisma as never, { send: jest.fn() } as never, { record: jest.fn() } as never);
+    const out = await svc.markRead(CHAT_ID, { id: CLIENT_ID, role: 'client' } as never, 'msg-cursor');
+    expect(prisma.message.updateMany).toHaveBeenCalledWith({
+      where: {
+        chatId: CHAT_ID,
+        createdAt: { lte: cursorDate },
+        senderUserId: { not: CLIENT_ID },
+        readAt: null,
+      },
+      data: { readAt: expect.any(Date) },
+    });
+    expect(out).toEqual({ updated: 4 });
+  });
+
+  it('cursor message not found → 404', async () => {
+    const prisma = {
+      chat: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: CHAT_ID,
+          orderId: ORDER_ID,
+          order: { id: ORDER_ID, clientUserId: CLIENT_ID },
+        }),
+      },
+      message: {
+        findUnique: jest.fn().mockResolvedValue(null),
+        updateMany: jest.fn(),
+      },
+    };
+    const svc = new ChatService(prisma as never, { send: jest.fn() } as never, { record: jest.fn() } as never);
+    await expect(
+      svc.markRead(CHAT_ID, { id: CLIENT_ID, role: 'client' } as never, 'missing'),
+    ).rejects.toMatchObject({ status: 404 });
+    expect(prisma.message.updateMany).not.toHaveBeenCalled();
+  });
+});
+
+describe('ChatService.listAdminChats', () => {
+  it('filters has_unread=true and counts only client-sent unread messages', async () => {
+    const prisma = {
+      chat: {
+        findMany: jest.fn().mockResolvedValue([
+          {
+            id: CHAT_ID,
+            orderId: ORDER_ID,
+            order: { id: ORDER_ID, contractNumber: 'C-100' },
+            messages: [{ createdAt: new Date('2026-05-28T13:00:00Z') }],
+            _count: { messages: 7 },
+          },
+        ]),
+        count: jest.fn().mockResolvedValue(1),
+      },
+    };
+    const svc = new ChatService(prisma as never, { send: jest.fn() } as never, { record: jest.fn() } as never);
+    const out = await svc.listAdminChats({ has_unread: true, page: 1, page_size: 20 });
+    expect(prisma.chat.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { messages: { some: { senderRole: 'client', readAt: null } } },
+      skip: 0,
+      take: 20,
+    }));
+    expect(out.rows[0]).toMatchObject({
+      chat_id: CHAT_ID,
+      order_id: ORDER_ID,
+      contract_number: 'C-100',
+      unread_count: 7,
+    });
+    expect(out.total).toBe(1);
+  });
+
+  it('without has_unread returns all chats', async () => {
+    const prisma = {
+      chat: {
+        findMany: jest.fn().mockResolvedValue([]),
+        count: jest.fn().mockResolvedValue(0),
+      },
+    };
+    const svc = new ChatService(prisma as never, { send: jest.fn() } as never, { record: jest.fn() } as never);
+    await svc.listAdminChats({});
+    expect(prisma.chat.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: {},
+      skip: 0,
+      take: 20,
+    }));
+  });
+});
