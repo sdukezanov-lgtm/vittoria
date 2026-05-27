@@ -57,7 +57,7 @@ export function renderTemplate(
     }
     case 'chat.reply.received': {
       const p = data as ChatReplyReceivedPayload;
-      const order = p.contractNumber ? `Заказ ${p.contractNumber}` : `Заказ ${p.orderId}`;
+      const order = p.contractNumber ? `Заказ ${p.contractNumber}` : 'Заказ';
       const tail = p.preview ? ` ${p.preview}` : '';
       return {
         title: 'VITTORIA HOME',
