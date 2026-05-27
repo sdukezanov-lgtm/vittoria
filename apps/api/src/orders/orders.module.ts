@@ -4,11 +4,12 @@ import { OrdersService } from './orders.service';
 import { OrdersMapper } from './orders.mapper';
 import { OrdersController } from './orders.controller';
 import { AdminOrdersController } from './admin-orders.controller';
+import { PartnerOrdersController } from './partner-orders.controller';
 import { QUEUE_AMOCRM_OUTBOUND } from '../queues/queue-names';
 
 @Module({
   imports: [BullModule.registerQueue({ name: QUEUE_AMOCRM_OUTBOUND })],
-  controllers: [OrdersController, AdminOrdersController],
+  controllers: [OrdersController, AdminOrdersController, PartnerOrdersController],
   providers: [OrdersService, OrdersMapper],
   exports: [OrdersService, OrdersMapper],
 })
