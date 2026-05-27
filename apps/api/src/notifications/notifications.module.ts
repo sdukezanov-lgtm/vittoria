@@ -5,6 +5,7 @@ import { NotificationsDedupService } from './notifications.dedup.service';
 import { NotificationsProcessor } from './jobs/notifications.processor';
 import { PushModule } from './push/push.module';
 import { SmsModule } from '../sms/sms.module';
+import { PushTokensController } from './push-tokens.controller';
 import { QUEUE_NOTIFICATIONS } from '../queues/queue-names';
 
 @Module({
@@ -13,6 +14,7 @@ import { QUEUE_NOTIFICATIONS } from '../queues/queue-names';
     PushModule,
     SmsModule,
   ],
+  controllers: [PushTokensController],
   providers: [NotificationsService, NotificationsDedupService, NotificationsProcessor],
   exports: [NotificationsService],
 })
