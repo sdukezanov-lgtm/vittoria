@@ -9,6 +9,7 @@ import { AmocrmWebhookGuard } from './amocrm-webhook.guard';
 import { AmocrmWebhookController } from './amocrm-webhook.controller';
 import { AmocrmSyncService } from './amocrm-sync.service';
 import { AmocrmInboundProcessor } from './jobs/amocrm-inbound.processor';
+import { AmocrmOutboundProcessor } from './jobs/amocrm-outbound.processor';
 import { AMOCRM_CLIENT } from './amocrm.types';
 import { QUEUE_AMOCRM_INBOUND, QUEUE_AMOCRM_OUTBOUND } from '../queues/queue-names';
 
@@ -26,6 +27,7 @@ import { QUEUE_AMOCRM_INBOUND, QUEUE_AMOCRM_OUTBOUND } from '../queues/queue-nam
     AmocrmWebhookGuard,
     AmocrmSyncService,
     AmocrmInboundProcessor,
+    AmocrmOutboundProcessor,
     {
       provide: AMOCRM_CLIENT,
       inject: [AmocrmConfig, AmocrmMockClient, AmocrmHttpClient],
