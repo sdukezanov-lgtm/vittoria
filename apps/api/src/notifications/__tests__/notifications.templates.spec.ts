@@ -20,7 +20,7 @@ describe('renderTemplate', () => {
       contractNumber: null,
       preview: 'Тест',
     });
-    expect(out.body).toContain('Заказ');
+    expect(out.body).toContain('Ваш заказ');
     expect(out.body).toContain('Тест');
   });
 
