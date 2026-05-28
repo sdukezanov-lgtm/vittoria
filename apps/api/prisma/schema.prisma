@@ -28,10 +28,11 @@ model User {
 
   authCodes     AuthCode[]
   sessions      Session[]
-  clientOrders  Order[]     @relation("ClientOrders")
-  partnerOrders Order[]     @relation("PartnerOrders")
+  clientOrders  Order[]             @relation("ClientOrders")
+  partnerOrders Order[]             @relation("PartnerOrders")
   pushTokens    PushToken[]
   sentMessages  Message[]
+  commissions   PartnerCommission[] @relation("PartnerCommissions")
 
   @@map("users")
 }
@@ -96,10 +97,11 @@ model Order {
   createdAt        DateTime   @default(now()) @map("created_at")
   updatedAt        DateTime   @updatedAt @map("updated_at")
 
-  client  User                @relation("ClientOrders", fields: [clientUserId], references: [id], onDelete: Cascade)
-  partner User?               @relation("PartnerOrders", fields: [partnerUserId], references: [id], onDelete: SetNull)
-  history OrderStageHistory[]
-  chat    Chat?
+  client      User                @relation("ClientOrders", fields: [clientUserId], references: [id], onDelete: Cascade)
+  partner     User?               @relation("PartnerOrders", fields: [partnerUserId], references: [id], onDelete: SetNull)
+  history     OrderStageHistory[]
+  chat        Chat?
+  commissions PartnerCommission[]
 
   @@index([clientUserId])
   @@index([partnerUserId])
@@ -174,6 +176,29 @@ model Message {
 
   @@index([chatId, createdAt(sort: Desc)])
   @@map("messages")
+}
+
+enum PayoutStatus {
+  pending
+  approved
+  paid
+}
+
+model PartnerCommission {
+  id            String       @id @default(uuid()) @db.Uuid
+  orderId       String       @map("order_id") @db.Uuid
+  partnerUserId String       @map("partner_user_id") @db.Uuid
+  amount        Decimal      @db.Decimal(12, 2)
+  payoutStatus  PayoutStatus @default(pending) @map("payout_status")
+  paidAt        DateTime?    @map("paid_at")
+  createdAt     DateTime     @default(now()) @map("created_at")
+
+  order   Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  partner User  @relation("PartnerCommissions", fields: [partnerUserId], references: [id])
+
+  @@index([partnerUserId])
+  @@index([orderId])
+  @@map("partner_commissions")
 }
 
 model AuditLog {
