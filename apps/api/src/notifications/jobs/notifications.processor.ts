@@ -6,7 +6,8 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService } from '../../audit/audit.service';
 import { SMS_PROVIDER, type SmsProvider } from '../../sms/sms.types';
 import { PUSH_PROVIDER, type PushProvider } from '../push/push.types';
-import { renderTemplate } from '../notifications.templates';
+import { TemplatesService } from '../templates.service';
+import { buildVars } from '../notifications.vars';
 import { CHANNEL_MATRIX, type NotificationEvent } from '../notifications.types';
 
 interface DispatchJob {
@@ -24,6 +25,7 @@ export class NotificationsProcessor extends WorkerHost {
     @Inject(PUSH_PROVIDER) private readonly push: PushProvider,
     @Inject(SMS_PROVIDER) private readonly sms: SmsProvider,
     private readonly audit: AuditService,
+    private readonly templates: TemplatesService,
   ) {
     super();
   }
@@ -31,7 +33,7 @@ export class NotificationsProcessor extends WorkerHost {
   async process(job: Job<DispatchJob>): Promise<{ pushSent: number; smsSent: number }> {
     const { userId, event, data } = job.data;
     const matrix = CHANNEL_MATRIX[event];
-    const template = renderTemplate(event, data as never);
+    const template = await this.templates.render(event, buildVars(event, data));
 
     let pushSent = 0;
     let smsSent = 0;

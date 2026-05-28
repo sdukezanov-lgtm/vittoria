@@ -7,6 +7,7 @@ import { OrderProgressListener } from './listeners/order-progress.listener';
 import { PushModule } from './push/push.module';
 import { SmsModule } from '../sms/sms.module';
 import { PushTokensController } from './push-tokens.controller';
+import { TemplatesService } from './templates.service';
 import { QUEUE_NOTIFICATIONS } from '../queues/queue-names';
 
 @Module({
@@ -16,7 +17,7 @@ import { QUEUE_NOTIFICATIONS } from '../queues/queue-names';
     SmsModule,
   ],
   controllers: [PushTokensController],
-  providers: [NotificationsService, NotificationsDedupService, NotificationsProcessor, OrderProgressListener],
+  providers: [NotificationsService, NotificationsDedupService, NotificationsProcessor, OrderProgressListener, TemplatesService],
   exports: [NotificationsService],
 })
 export class NotificationsModule {}
