@@ -40,7 +40,10 @@ export const envSchema = z.object({
   APNS_TEAM_ID: z.string().default(''),
   APNS_PRIVATE_KEY: z.string().default(''),
   APNS_BUNDLE_ID: z.string().default(''),
-  APNS_USE_SANDBOX: z.coerce.boolean().default(false),
+  APNS_USE_SANDBOX: z
+    .string()
+    .default('false')
+    .transform((v) => v === '1' || v.toLowerCase() === 'true'),
 })
   .refine(
     (env) => env.SMS_PROVIDER_MODE !== 'smsc' || (env.SMSC_LOGIN !== '' && env.SMSC_PASSWORD !== ''),

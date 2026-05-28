@@ -100,4 +100,10 @@ describe('envSchema', () => {
     expect(parsed.APNS_USE_SANDBOX).toBe(false);
     expect(parsed.APNS_KEY_ID).toBe('');
   });
+
+  it('parses APNS_USE_SANDBOX=true string as true, false-ish as false', () => {
+    expect(envSchema.parse({ ...valid, APNS_USE_SANDBOX: 'true' }).APNS_USE_SANDBOX).toBe(true);
+    expect(envSchema.parse({ ...valid, APNS_USE_SANDBOX: '1' }).APNS_USE_SANDBOX).toBe(true);
+    expect(envSchema.parse({ ...valid, APNS_USE_SANDBOX: 'false' }).APNS_USE_SANDBOX).toBe(false);
+  });
 });
