@@ -30,25 +30,27 @@ describe('envSchema', () => {
     expect(() => envSchema.parse({ ...valid, JWT_SECRET: 'short' })).toThrow(/JWT_SECRET/);
   });
 
-  it('accepts production env with SMSC credentials', () => {
+  it('defaults SMS_PROVIDER_MODE to dev with empty SMSC credentials', () => {
+    const parsed = envSchema.parse({ ...valid });
+    expect(parsed.SMS_PROVIDER_MODE).toBe('dev');
+    expect(parsed.SMSC_LOGIN).toBe('');
+    expect(parsed.SMSC_BASE_URL).toBe('https://smsc.ru');
+  });
+
+  it('accepts smsc mode with SMSC credentials', () => {
     const parsed = envSchema.parse({
       ...valid,
-      NODE_ENV: 'production',
+      SMS_PROVIDER_MODE: 'smsc',
       SMSC_LOGIN: 'acme',
       SMSC_PASSWORD: 'secret',
     });
+    expect(parsed.SMS_PROVIDER_MODE).toBe('smsc');
     expect(parsed.SMSC_LOGIN).toBe('acme');
   });
 
-  it('rejects production env without SMSC credentials', () => {
+  it('rejects smsc mode without SMSC credentials', () => {
     expect(() =>
-      envSchema.parse({ ...valid, NODE_ENV: 'production' }),
+      envSchema.parse({ ...valid, SMS_PROVIDER_MODE: 'smsc' }),
     ).toThrow(/SMSC/);
-  });
-
-  it('allows empty SMSC credentials in development', () => {
-    const parsed = envSchema.parse({ ...valid, NODE_ENV: 'development' });
-    expect(parsed.SMSC_LOGIN).toBe('');
-    expect(parsed.SMSC_BASE_URL).toBe('https://smsc.ru');
   });
 });
