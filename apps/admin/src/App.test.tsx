@@ -1,10 +1,15 @@
-import { render, screen } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
+import { describe, it, expect, beforeEach } from 'vitest';
 import App from './App';
 
 describe('App', () => {
-  it('renders the app title', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it('shows the login screen when unauthenticated', async () => {
     render(<App />);
-    expect(screen.getByText('VITTORIA HOME — Admin')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText('VITTORIA HOME')).toBeInTheDocument());
+    expect(screen.getByLabelText(/телефон/i)).toBeInTheDocument();
   });
 });
