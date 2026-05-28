@@ -53,4 +53,28 @@ describe('envSchema', () => {
       envSchema.parse({ ...valid, SMS_PROVIDER_MODE: 'smsc' }),
     ).toThrow(/SMSC/);
   });
+
+  it('defaults PUSH_PROVIDER_MODE to dev with empty FCM credentials', () => {
+    const parsed = envSchema.parse({ ...valid });
+    expect(parsed.PUSH_PROVIDER_MODE).toBe('dev');
+    expect(parsed.FCM_PROJECT_ID).toBe('');
+  });
+
+  it('accepts real push mode with FCM credentials', () => {
+    const parsed = envSchema.parse({
+      ...valid,
+      PUSH_PROVIDER_MODE: 'real',
+      FCM_PROJECT_ID: 'proj',
+      FCM_CLIENT_EMAIL: 'svc@proj.iam.gserviceaccount.com',
+      FCM_PRIVATE_KEY: '-----BEGIN PRIVATE KEY-----\\nabc\\n-----END PRIVATE KEY-----\\n',
+    });
+    expect(parsed.PUSH_PROVIDER_MODE).toBe('real');
+    expect(parsed.FCM_PROJECT_ID).toBe('proj');
+  });
+
+  it('rejects real push mode without FCM credentials', () => {
+    expect(() =>
+      envSchema.parse({ ...valid, PUSH_PROVIDER_MODE: 'real' }),
+    ).toThrow(/FCM/);
+  });
 });

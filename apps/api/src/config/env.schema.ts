@@ -32,10 +32,20 @@ export const envSchema = z.object({
   SMSC_PASSWORD: z.string().default(''),
   SMSC_SENDER: z.string().default(''),
   SMSC_BASE_URL: z.string().url().default('https://smsc.ru'),
+  PUSH_PROVIDER_MODE: z.enum(['dev', 'real']).default('dev'),
+  FCM_PROJECT_ID: z.string().default(''),
+  FCM_CLIENT_EMAIL: z.string().default(''),
+  FCM_PRIVATE_KEY: z.string().default(''),
 })
   .refine(
     (env) => env.SMS_PROVIDER_MODE !== 'smsc' || (env.SMSC_LOGIN !== '' && env.SMSC_PASSWORD !== ''),
     { message: 'SMSC_LOGIN and SMSC_PASSWORD are required when SMS_PROVIDER_MODE=smsc' },
+  )
+  .refine(
+    (env) =>
+      env.PUSH_PROVIDER_MODE !== 'real' ||
+      (env.FCM_PROJECT_ID !== '' && env.FCM_CLIENT_EMAIL !== '' && env.FCM_PRIVATE_KEY !== ''),
+    { message: 'FCM_PROJECT_ID, FCM_CLIENT_EMAIL and FCM_PRIVATE_KEY are required when PUSH_PROVIDER_MODE=real' },
   );
 
 export type Env = z.infer<typeof envSchema>;
