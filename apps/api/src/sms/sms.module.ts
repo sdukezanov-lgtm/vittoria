@@ -1,12 +1,12 @@
 import { Module } from '@nestjs/common';
-import { DevSmsProvider } from './dev-sms.provider';
+import { SmscSmsProvider } from './smsc-sms.provider';
 import { SMS_PROVIDER } from './sms.types';
 
 @Module({
   providers: [
     {
       provide: SMS_PROVIDER,
-      useClass: DevSmsProvider,
+      useClass: SmscSmsProvider,
     },
   ],
   exports: [SMS_PROVIDER],
