@@ -36,6 +36,11 @@ export const envSchema = z.object({
   FCM_PROJECT_ID: z.string().default(''),
   FCM_CLIENT_EMAIL: z.string().default(''),
   FCM_PRIVATE_KEY: z.string().default(''),
+  APNS_KEY_ID: z.string().default(''),
+  APNS_TEAM_ID: z.string().default(''),
+  APNS_PRIVATE_KEY: z.string().default(''),
+  APNS_BUNDLE_ID: z.string().default(''),
+  APNS_USE_SANDBOX: z.coerce.boolean().default(false),
 })
   .refine(
     (env) => env.SMS_PROVIDER_MODE !== 'smsc' || (env.SMSC_LOGIN !== '' && env.SMSC_PASSWORD !== ''),
@@ -44,8 +49,14 @@ export const envSchema = z.object({
   .refine(
     (env) =>
       env.PUSH_PROVIDER_MODE !== 'real' ||
-      (env.FCM_PROJECT_ID !== '' && env.FCM_CLIENT_EMAIL !== '' && env.FCM_PRIVATE_KEY !== ''),
-    { message: 'FCM_PROJECT_ID, FCM_CLIENT_EMAIL and FCM_PRIVATE_KEY are required when PUSH_PROVIDER_MODE=real' },
+      (env.FCM_PROJECT_ID !== '' &&
+        env.FCM_CLIENT_EMAIL !== '' &&
+        env.FCM_PRIVATE_KEY !== '' &&
+        env.APNS_KEY_ID !== '' &&
+        env.APNS_TEAM_ID !== '' &&
+        env.APNS_PRIVATE_KEY !== '' &&
+        env.APNS_BUNDLE_ID !== ''),
+    { message: 'FCM_* and APNS_* are required when PUSH_PROVIDER_MODE=real' },
   );
 
 export type Env = z.infer<typeof envSchema>;

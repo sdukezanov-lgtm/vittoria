@@ -60,21 +60,44 @@ describe('envSchema', () => {
     expect(parsed.FCM_PROJECT_ID).toBe('');
   });
 
-  it('accepts real push mode with FCM credentials', () => {
+  it('accepts real push mode with FCM + APNS credentials', () => {
     const parsed = envSchema.parse({
       ...valid,
       PUSH_PROVIDER_MODE: 'real',
       FCM_PROJECT_ID: 'proj',
       FCM_CLIENT_EMAIL: 'svc@proj.iam.gserviceaccount.com',
       FCM_PRIVATE_KEY: '-----BEGIN PRIVATE KEY-----\\nabc\\n-----END PRIVATE KEY-----\\n',
+      APNS_KEY_ID: 'KEY123',
+      APNS_TEAM_ID: 'TEAM123',
+      APNS_PRIVATE_KEY: '-----BEGIN PRIVATE KEY-----\\nec\\n-----END PRIVATE KEY-----\\n',
+      APNS_BUNDLE_ID: 'app.vittoria.client',
     });
     expect(parsed.PUSH_PROVIDER_MODE).toBe('real');
-    expect(parsed.FCM_PROJECT_ID).toBe('proj');
+    expect(parsed.APNS_BUNDLE_ID).toBe('app.vittoria.client');
+    expect(parsed.APNS_USE_SANDBOX).toBe(false);
   });
 
   it('rejects real push mode without FCM credentials', () => {
     expect(() =>
       envSchema.parse({ ...valid, PUSH_PROVIDER_MODE: 'real' }),
     ).toThrow(/FCM/);
+  });
+
+  it('rejects real push mode with FCM but missing APNS credentials', () => {
+    expect(() =>
+      envSchema.parse({
+        ...valid,
+        PUSH_PROVIDER_MODE: 'real',
+        FCM_PROJECT_ID: 'proj',
+        FCM_CLIENT_EMAIL: 'svc@proj.iam.gserviceaccount.com',
+        FCM_PRIVATE_KEY: 'key',
+      }),
+    ).toThrow(/APNS/);
+  });
+
+  it('defaults APNS_USE_SANDBOX to false and APNS fields to empty', () => {
+    const parsed = envSchema.parse({ ...valid });
+    expect(parsed.APNS_USE_SANDBOX).toBe(false);
+    expect(parsed.APNS_KEY_ID).toBe('');
   });
 });
