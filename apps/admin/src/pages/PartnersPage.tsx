@@ -19,6 +19,18 @@ export function PartnersPage() {
     queryFn: () => listAdminUsers({ role: 'partner', page: 1, page_size: 100 }),
   });
 
+  function resetForm() {
+    setPhone('');
+    setFirstName('');
+    setLastName('');
+    setPhoneError('');
+  }
+
+  function handleClose() {
+    close();
+    resetForm();
+  }
+
   const mutation = useMutation({
     mutationFn: () =>
       createAdminUser({
@@ -29,10 +41,7 @@ export function PartnersPage() {
       }),
     onSuccess: () => {
       close();
-      setPhone('');
-      setFirstName('');
-      setLastName('');
-      setPhoneError('');
+      resetForm();
       void queryClient.invalidateQueries({ queryKey: ['adminUsers'] });
       notifications.show({ message: 'Партнёр создан', color: 'green' });
     },
@@ -84,7 +93,7 @@ export function PartnersPage() {
         </Table>
       )}
 
-      <Modal opened={opened} onClose={close} title="Новый партнёр">
+      <Modal opened={opened} onClose={handleClose} title="Новый партнёр">
         <Stack>
           <TextInput
             label="Телефон"

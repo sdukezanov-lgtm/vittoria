@@ -47,5 +47,6 @@ describe('PartnersPage', () => {
     await waitFor(() =>
       expect(usersApi.createAdminUser).toHaveBeenCalledWith(expect.objectContaining({ phone: '+79990000000', role: 'partner' })),
     );
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   });
 });
