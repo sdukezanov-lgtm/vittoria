@@ -216,3 +216,12 @@ model AuditLog {
   @@index([actorUserId, createdAt(sort: Desc)])
   @@map("audit_log")
 }
+
+model NotificationTemplate {
+  event     String   @id
+  title     String
+  body      String
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("notification_templates")
+}
