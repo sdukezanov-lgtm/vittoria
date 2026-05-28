@@ -18,7 +18,7 @@ export class FcmPushProvider implements PushProvider {
 
   async send(message: PushMessage): Promise<PushSendResult> {
     if (message.platform !== 'android') {
-      throw new Error('iOS push not configured (Plan 4d)');
+      throw new Error('FcmPushProvider handles Android only');
     }
 
     const projectId = this.config.get('FCM_PROJECT_ID', { infer: true });

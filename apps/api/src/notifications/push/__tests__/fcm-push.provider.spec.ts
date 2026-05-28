@@ -54,7 +54,7 @@ describe('FcmPushProvider.send', () => {
     const provider = new FcmPushProvider(makeConfig(), makeTokenService());
     await expect(
       provider.send({ token: 'apns-tok', platform: 'ios', title: 't', body: 'b' }),
-    ).rejects.toThrow(/iOS push/);
+    ).rejects.toThrow(/Android only/);
     expect(mockedPost).not.toHaveBeenCalled();
   });
 

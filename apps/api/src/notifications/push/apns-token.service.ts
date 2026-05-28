@@ -2,16 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { sign } from 'node:crypto';
 import type { Env } from '../../config/env.schema';
+import { base64url } from './jwt.util';
 
 const CACHE_TTL_MS = 50 * 60 * 1000; // refresh well under APNs' 60-min limit
-
-function base64url(input: Buffer | string): string {
-  return Buffer.from(input)
-    .toString('base64')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '');
-}
 
 @Injectable()
 export class ApnsTokenService {

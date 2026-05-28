@@ -3,18 +3,11 @@ import { ConfigService } from '@nestjs/config';
 import { createSign } from 'node:crypto';
 import axios from 'axios';
 import type { Env } from '../../config/env.schema';
+import { base64url } from './jwt.util';
 
 const TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const SCOPE = 'https://www.googleapis.com/auth/firebase.messaging';
 const EXPIRY_BUFFER_MS = 60_000;
-
-function base64url(input: Buffer | string): string {
-  return Buffer.from(input)
-    .toString('base64')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '');
-}
 
 interface TokenResponse {
   access_token: string;
