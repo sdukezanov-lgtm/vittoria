@@ -11,6 +11,7 @@ import { AppLayout } from './components/AppLayout';
 import { LoginPage } from './pages/LoginPage';
 import { OrdersPage } from './pages/OrdersPage';
 import { OrderPage } from './pages/OrderPage';
+import { ChatsPage } from './pages/ChatsPage';
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false } },
@@ -36,6 +37,7 @@ export default function App() {
               >
                 <Route path="/orders" element={<OrdersPage />} />
                 <Route path="/orders/:id" element={<OrderPage />} />
+                <Route path="/chats" element={<ChatsPage />} />
                 <Route index element={<Navigate to="/orders" replace />} />
               </Route>
               <Route path="*" element={<Navigate to="/orders" replace />} />
