@@ -27,6 +27,14 @@ export const envSchema = z.object({
   AMOCRM_FIELD_PREPAYMENT_ID: z.coerce.number().int().positive().default(1004),
   AMOCRM_FIELD_PARTNER_USER_ID: z.coerce.number().int().positive().default(1005),
   AMOCRM_FIELD_PARTNER_SERVICES_ID: z.coerce.number().int().positive().default(1006),
-});
+  SMSC_LOGIN: z.string().default(''),
+  SMSC_PASSWORD: z.string().default(''),
+  SMSC_SENDER: z.string().default(''),
+  SMSC_BASE_URL: z.string().url().default('https://smsc.ru'),
+})
+  .refine(
+    (env) => env.NODE_ENV !== 'production' || (env.SMSC_LOGIN !== '' && env.SMSC_PASSWORD !== ''),
+    { message: 'SMSC_LOGIN and SMSC_PASSWORD are required when NODE_ENV=production' },
+  );
 
 export type Env = z.infer<typeof envSchema>;

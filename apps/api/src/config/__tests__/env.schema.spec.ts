@@ -29,4 +29,26 @@ describe('envSchema', () => {
   it('rejects short JWT_SECRET', () => {
     expect(() => envSchema.parse({ ...valid, JWT_SECRET: 'short' })).toThrow(/JWT_SECRET/);
   });
+
+  it('accepts production env with SMSC credentials', () => {
+    const parsed = envSchema.parse({
+      ...valid,
+      NODE_ENV: 'production',
+      SMSC_LOGIN: 'acme',
+      SMSC_PASSWORD: 'secret',
+    });
+    expect(parsed.SMSC_LOGIN).toBe('acme');
+  });
+
+  it('rejects production env without SMSC credentials', () => {
+    expect(() =>
+      envSchema.parse({ ...valid, NODE_ENV: 'production' }),
+    ).toThrow(/SMSC/);
+  });
+
+  it('allows empty SMSC credentials in development', () => {
+    const parsed = envSchema.parse({ ...valid, NODE_ENV: 'development' });
+    expect(parsed.SMSC_LOGIN).toBe('');
+    expect(parsed.SMSC_BASE_URL).toBe('https://smsc.ru');
+  });
 });
