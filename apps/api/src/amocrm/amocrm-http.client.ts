@@ -28,15 +28,20 @@ export class AmocrmHttpClient implements AmoCrmClient {
       `/api/v4/contacts/${id}`,
     );
     const data = res.data;
-    const phoneField = data.custom_fields_values?.find((f) =>
-      f.values.some((v) => typeof v.value === 'string' && /^\+?\d{10,}$/.test(v.value as string)),
-    );
-    const phoneValue = phoneField?.values[0]?.value;
+    const phoneRe = /^\+?\d{10,}$/;
+    let phoneValue: string | null = null;
+    for (const f of data.custom_fields_values ?? []) {
+      const match = f.values.find((v) => typeof v.value === 'string' && phoneRe.test(v.value));
+      if (match) {
+        phoneValue = match.value as string;
+        break;
+      }
+    }
     return {
       id: data.id,
       name: data.name ?? null,
       custom_fields_values: data.custom_fields_values ?? null,
-      phone: typeof phoneValue === 'string' ? phoneValue : null,
+      phone: phoneValue,
     };
   }
 

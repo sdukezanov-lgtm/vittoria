@@ -27,6 +27,20 @@ export function setAuthHandlers(h: AuthHandlers): void {
   handlers = h;
 }
 
+// Single-flight the refresh: the server rotates and revokes the refresh token on
+// every call, so concurrent 401s must share ONE refresh — otherwise the losers
+// send an already-revoked token, get 401, and the user is logged out mid-session.
+let inFlightRefresh: Promise<string> | null = null;
+
+function refreshOnce(): Promise<string> {
+  if (!inFlightRefresh) {
+    inFlightRefresh = handlers.refresh().finally(() => {
+      inFlightRefresh = null;
+    });
+  }
+  return inFlightRefresh;
+}
+
 interface FetchOpts {
   method?: string;
   body?: unknown;
@@ -63,7 +77,7 @@ export async function apiFetch<T = unknown>(path: string, opts: FetchOpts = {}):
 
   if (res.status === 401 && !opts.skipAuthRetry) {
     try {
-      const newToken = await handlers.refresh();
+      const newToken = await refreshOnce();
       res = await doFetch(path, opts, newToken);
     } catch {
       handlers.onAuthFail();

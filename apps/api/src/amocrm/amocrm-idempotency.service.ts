@@ -1,7 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { RedisService } from '../redis/redis.service';
 
-const TTL_SEC = 24 * 3600;
+// Short window: long enough to collapse amoCRM webhook redeliveries of the same
+// event (retries arrive within minutes), short enough that a genuinely distinct
+// later update to the same entity is not suppressed (and the 15-min failsafe sync
+// cron reconciles anything missed inside the window).
+const TTL_SEC = 10 * 60;
 
 @Injectable()
 export class AmocrmIdempotencyService {

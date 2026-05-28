@@ -76,6 +76,23 @@ describe('apiFetch', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1); // no retry attempted
   });
 
+  it('single-flights refresh: concurrent 401s trigger only one refresh', async () => {
+    const refresh = vi.fn(
+      () => new Promise<string>((resolve) => setTimeout(() => resolve('access-2'), 10)),
+    );
+    setAuthHandlers({ getAccessToken: () => 'access-1', refresh, onAuthFail: vi.fn() });
+    const fetchMock = vi.fn().mockImplementation((_url: string, opts: { headers: Record<string, string> }) => {
+      const authed = opts.headers.Authorization === 'Bearer access-2';
+      return Promise.resolve(mockFetchOnce(authed ? 200 : 401, { ok: true }));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const [a, b] = await Promise.all([apiFetch('/x'), apiFetch('/y')]);
+    expect(a).toEqual({ ok: true });
+    expect(b).toEqual({ ok: true });
+    expect(refresh).toHaveBeenCalledTimes(1); // shared refresh, not one per request
+  });
+
   it('does NOT refresh on 401 when skipAuthRetry is set (no recursion for /auth/refresh)', async () => {
     const refresh = vi.fn().mockResolvedValue('access-2');
     const onAuthFail = vi.fn();

@@ -36,7 +36,10 @@ export class AmocrmWebhookController {
 
     let accepted = 0;
     for (const ev of events) {
-      const eventId = createHash('sha256').update(`${ev.kind}:${ev.id}:${Date.now()}`).digest('hex').slice(0, 32);
+      // Deterministic id (no timestamp) so amoCRM redeliveries of the same event
+      // collapse to one job within the idempotency window. Genuinely distinct later
+      // updates are reconciled by the failsafe sync cron.
+      const eventId = createHash('sha256').update(`${ev.kind}:${ev.id}`).digest('hex').slice(0, 32);
       const isNew = await this.idempotency.markIfNew(eventId);
       if (!isNew) continue;
       await this.queue.add('process', { kind: ev.kind, entityId: ev.id, eventId }, { jobId: eventId });

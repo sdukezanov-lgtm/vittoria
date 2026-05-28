@@ -61,12 +61,15 @@ describe('AmoCRM Webhook (e2e)', () => {
   });
 
   it('deduplicates by event id: a second identical webhook adds no new job', async () => {
-    // The controller hashes (kind:id:Date.now()) per event, so two requests
-    // a millisecond apart get different event ids. We just verify the basic
-    // accept/idempotency contract: a second well-formed call still returns 200.
-    const a = await postWebhook({ leads: { update: [{ id: 777 }] } });
+    // The controller hashes (kind:id) deterministically, so a redelivery of the
+    // same event within the idempotency window is dropped (accepted: 0). Use a
+    // per-run-unique id so the Redis dedup key is fresh on every test run.
+    const id = Date.now() % 1_000_000;
+    const a = await postWebhook({ leads: { update: [{ id }] } });
     expect(a.status).toBe(200);
-    const b = await postWebhook({ leads: { update: [{ id: 777 }] } });
+    expect(a.body).toEqual({ accepted: 1 });
+    const b = await postWebhook({ leads: { update: [{ id }] } });
     expect(b.status).toBe(200);
+    expect(b.body).toEqual({ accepted: 0 });
   });
 });

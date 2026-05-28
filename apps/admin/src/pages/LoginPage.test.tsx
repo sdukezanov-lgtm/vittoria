@@ -6,6 +6,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { LoginPage } from './LoginPage';
 import { AuthContext, type AuthContextValue } from '../auth/useAuth';
 import * as authApi from '../api/auth.api';
+import { ApiError } from '../api/client';
 
 vi.mock('../api/auth.api');
 
@@ -55,5 +56,16 @@ describe('LoginPage', () => {
     await user.click(screen.getByRole('button', { name: /войти/i }));
 
     expect(await screen.findByText(/неверный код/i)).toBeInTheDocument();
+  });
+
+  it('shows the rate-limit message when requestCode returns 400 AUTH_RATE_LIMITED', async () => {
+    vi.mocked(authApi.requestCode).mockRejectedValue(new ApiError(400, 'AUTH_RATE_LIMITED', 'rate limited'));
+    setup();
+    const user = userEvent.setup();
+
+    await user.type(screen.getByLabelText(/телефон/i), '+79990000000');
+    await user.click(screen.getByRole('button', { name: /получить код/i }));
+
+    expect(await screen.findByText(/слишком много попыток/i)).toBeInTheDocument();
   });
 });

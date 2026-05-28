@@ -30,7 +30,8 @@ export function LoginPage() {
       await requestCode(phone);
       setStep('code');
     } catch (e) {
-      setError(e instanceof ApiError && e.status === 429 ? 'Слишком много попыток, подождите' : 'Не удалось отправить код');
+      const rateLimited = e instanceof ApiError && (e.status === 429 || e.code === 'AUTH_RATE_LIMITED');
+      setError(rateLimited ? 'Слишком много попыток, подождите' : 'Не удалось отправить код');
     } finally {
       setBusy(false);
     }
