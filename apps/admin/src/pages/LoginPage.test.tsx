@@ -24,7 +24,9 @@ function setup(login = vi.fn().mockResolvedValue(undefined)) {
 }
 
 describe('LoginPage', () => {
-  beforeEach(() => vi.resetAllMocks());
+  beforeEach(() => {
+    vi.resetAllMocks();
+  });
 
   it('requests code then verifies via login', async () => {
     vi.mocked(authApi.requestCode).mockResolvedValue({ retry_after_sec: 60 });
