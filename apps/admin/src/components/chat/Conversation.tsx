@@ -27,13 +27,6 @@ export function Conversation({ chatId }: { chatId: string }) {
     refetchInterval: 10_000,
   });
 
-  // Reset per-chat accumulated state when switching chats.
-  useEffect(() => {
-    setOlder([]);
-    setNoMoreOlder(false);
-    lastMarkedRef.current = null;
-  }, [chatId]);
-
   const fresh = data?.rows ?? []; // newest-first
 
   // Merge older (asc) + fresh (reversed to asc), de-duped by id.

@@ -14,7 +14,7 @@ export function ChatsPage() {
         </Grid.Col>
         <Grid.Col span={8}>
           {selectedChatId ? (
-            <Conversation chatId={selectedChatId} />
+            <Conversation key={selectedChatId} chatId={selectedChatId} />
           ) : (
             <Text c="dimmed">Выберите диалог слева</Text>
           )}
