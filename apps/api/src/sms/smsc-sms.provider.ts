@@ -40,6 +40,9 @@ export class SmscSmsProvider implements SmsProvider {
       this.logger.warn(`SMSC send failed: error_code=${data.error_code}`);
       throw new Error(`SMSC error ${data.error_code}: ${data.error ?? 'unknown'}`);
     }
+    if (data.id == null) {
+      throw new Error('SMSC response missing id');
+    }
 
     return { providerMessageId: String(data.id) };
   }

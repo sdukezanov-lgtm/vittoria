@@ -58,7 +58,13 @@ describe('SmscSmsProvider', () => {
   it('throws on SMSC error response', async () => {
     mockedPost.mockResolvedValue({ data: { error: 'authorize error', error_code: 2 } });
     const provider = new SmscSmsProvider(makeConfig());
-    await expect(provider.send({ to: '+79990000000', text: 'x' })).rejects.toThrow(/2/);
+    await expect(provider.send({ to: '+79990000000', text: 'x' })).rejects.toThrow('SMSC error 2: authorize error');
+  });
+
+  it('throws when SMSC response has neither error nor id', async () => {
+    mockedPost.mockResolvedValue({ data: {} });
+    const provider = new SmscSmsProvider(makeConfig());
+    await expect(provider.send({ to: '+79990000000', text: 'x' })).rejects.toThrow(/missing id/);
   });
 
   it('propagates transport errors', async () => {
