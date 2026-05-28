@@ -105,4 +105,31 @@ describe('Commissions (e2e)', () => {
       .send({ order_id: '00000000-0000-0000-0000-000000000001', partner_user_id: partner.id, amount: 100 });
     expect(res.status).toBe(403);
   });
+
+  it('admin GET /admin/commissions lists and filters by payout_status', async () => {
+    const admin = await seedUserWithToken(app, { role: 'admin', phone: null });
+    const client = await seedUserWithToken(app, { role: 'client' });
+    const partner = await seedUserWithToken(app, { role: 'partner', phone: '+79990005566' });
+    const order = await seedOrder(client.id, 6004);
+    const paid = await prisma.partnerCommission.create({
+      data: { orderId: order.id, partnerUserId: partner.id, amount: 1000, payoutStatus: 'paid' },
+    });
+    await prisma.partnerCommission.create({
+      data: { orderId: order.id, partnerUserId: partner.id, amount: 2000, payoutStatus: 'pending' },
+    });
+
+    const all = await request(app.getHttpServer())
+      .get('/api/v1/admin/commissions')
+      .set('Authorization', `Bearer ${admin.accessToken}`);
+    expect(all.status).toBe(200);
+    expect(all.body.total).toBe(2);
+    expect(all.body.page).toBe(1);
+
+    const filtered = await request(app.getHttpServer())
+      .get('/api/v1/admin/commissions?payout_status=paid')
+      .set('Authorization', `Bearer ${admin.accessToken}`);
+    expect(filtered.status).toBe(200);
+    expect(filtered.body.rows).toHaveLength(1);
+    expect(filtered.body.rows[0].id).toBe(paid.id);
+  });
 });
