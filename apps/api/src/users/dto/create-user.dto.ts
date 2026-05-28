@@ -1,6 +1,7 @@
 import { IsIn, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
 
 export class CreateUserDto {
+  @IsString()
   @Matches(/^\+7\d{10}$/, { message: 'phone must be +7XXXXXXXXXX' })
   phone!: string;
 

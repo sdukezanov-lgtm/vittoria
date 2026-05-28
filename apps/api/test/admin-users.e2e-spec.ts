@@ -34,6 +34,7 @@ describe('Admin Users (e2e)', () => {
     expect(res.status).toBe(201);
     expect(res.body.role).toBe('partner');
     expect(res.body.phone).toBe('+79991112233');
+    expect(res.body.first_name).toBe('Пётр');
     const stored = await prisma.user.findUnique({ where: { phone: '+79991112233' } });
     expect(stored).not.toBeNull();
   });
