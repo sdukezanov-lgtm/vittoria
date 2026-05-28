@@ -61,4 +61,18 @@ describe('apiFetch', () => {
     vi.stubGlobal('fetch', fetchMock);
     await expect(apiFetch('/x')).rejects.toMatchObject({ status: 429 });
   });
+
+  it('calls onAuthFail and throws ApiError when refresh itself rejects', async () => {
+    const onAuthFail = vi.fn();
+    setAuthHandlers({
+      getAccessToken: () => 'access-1',
+      refresh: vi.fn().mockRejectedValue(new Error('network')),
+      onAuthFail,
+    });
+    const fetchMock = vi.fn().mockResolvedValue(mockFetchOnce(401, {}));
+    vi.stubGlobal('fetch', fetchMock);
+    await expect(apiFetch('/x')).rejects.toBeInstanceOf(ApiError);
+    expect(onAuthFail).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledTimes(1); // no retry attempted
+  });
 });
