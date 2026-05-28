@@ -75,4 +75,18 @@ describe('apiFetch', () => {
     expect(onAuthFail).toHaveBeenCalledTimes(1);
     expect(fetchMock).toHaveBeenCalledTimes(1); // no retry attempted
   });
+
+  it('does NOT refresh on 401 when skipAuthRetry is set (no recursion for /auth/refresh)', async () => {
+    const refresh = vi.fn().mockResolvedValue('access-2');
+    const onAuthFail = vi.fn();
+    setAuthHandlers({ getAccessToken: () => 'access-1', refresh, onAuthFail });
+    const fetchMock = vi.fn().mockResolvedValue(mockFetchOnce(401, { error: { code: 'REFRESH_INVALID' } }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(apiFetch('/auth/refresh', { method: 'POST', skipAuthRetry: true })).rejects.toMatchObject({
+      status: 401,
+    });
+    expect(refresh).not.toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalledTimes(1); // single attempt, no refresh-retry loop
+  });
 });

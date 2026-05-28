@@ -30,6 +30,9 @@ export function setAuthHandlers(h: AuthHandlers): void {
 interface FetchOpts {
   method?: string;
   body?: unknown;
+  // Skip the 401-refresh-retry. Set for the auth endpoints themselves
+  // (e.g. /auth/refresh) so a 401 there cannot recursively trigger another refresh.
+  skipAuthRetry?: boolean;
 }
 
 async function doFetch(path: string, opts: FetchOpts, token: string | null): Promise<Response> {
@@ -58,7 +61,7 @@ async function parseError(res: Response): Promise<ApiError> {
 export async function apiFetch<T = unknown>(path: string, opts: FetchOpts = {}): Promise<T> {
   let res = await doFetch(path, opts, handlers.getAccessToken());
 
-  if (res.status === 401) {
+  if (res.status === 401 && !opts.skipAuthRetry) {
     try {
       const newToken = await handlers.refresh();
       res = await doFetch(path, opts, newToken);
