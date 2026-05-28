@@ -1,21 +1,22 @@
 import { useState } from 'react';
 import { Button, Center, Paper, Stack, Text, TextInput, Title } from '@mantine/core';
-import { useNavigate } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { requestCode } from '../api/auth.api';
 import { ApiError } from '../api/client';
 import { useAuth } from '../auth/useAuth';
 
 export function LoginPage() {
   const { login, status } = useAuth();
-  const navigate = useNavigate();
   const [step, setStep] = useState<'phone' | 'code'>('phone');
   const [phone, setPhone] = useState('');
   const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  // A successful login flips status to 'authenticated', which re-renders this
+  // and redirects — no imperative navigate() needed (that was a render-time side effect).
   if (status === 'authenticated') {
-    navigate('/orders', { replace: true });
+    return <Navigate to="/orders" replace />;
   }
 
   const onRequestCode = async () => {
@@ -40,7 +41,6 @@ export function LoginPage() {
     setBusy(true);
     try {
       await login(phone, code);
-      navigate('/orders', { replace: true });
     } catch {
       setError('Неверный код');
     } finally {

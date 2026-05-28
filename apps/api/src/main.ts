@@ -22,6 +22,12 @@ async function bootstrap() {
   app.useGlobalFilters(new HttpExceptionFilter());
   app.setGlobalPrefix('api/v1');
   const config = app.get(ConfigService<Env, true>);
+  const corsOrigins = config
+    .get('CORS_ORIGINS', { infer: true })
+    .split(',')
+    .map((o) => o.trim())
+    .filter(Boolean);
+  app.enableCors({ origin: corsOrigins, credentials: true });
   await app.listen(config.get('PORT', { infer: true }));
 }
 
