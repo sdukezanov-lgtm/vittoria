@@ -33,6 +33,8 @@ export const envSchema = z.object({
   SMSC_PASSWORD: z.string().default(''),
   SMSC_SENDER: z.string().default(''),
   SMSC_BASE_URL: z.string().url().default('https://smsc.ru'),
+  SMS_RU_API_ID: z.string().default(''),
+  SMS_RU_BASE_URL: z.string().url().default('https://sms.ru'),
   PUSH_PROVIDER_MODE: z.enum(['dev', 'real']).default('dev'),
   FCM_PROJECT_ID: z.string().default(''),
   FCM_CLIENT_EMAIL: z.string().default(''),
