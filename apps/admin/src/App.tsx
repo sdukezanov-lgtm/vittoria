@@ -12,6 +12,8 @@ import { LoginPage } from './pages/LoginPage';
 import { OrdersPage } from './pages/OrdersPage';
 import { OrderPage } from './pages/OrderPage';
 import { ChatsPage } from './pages/ChatsPage';
+import { PartnersPage } from './pages/PartnersPage';
+import { CommissionsPage } from './pages/CommissionsPage';
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false } },
@@ -38,6 +40,8 @@ export default function App() {
                 <Route path="/orders" element={<OrdersPage />} />
                 <Route path="/orders/:id" element={<OrderPage />} />
                 <Route path="/chats" element={<ChatsPage />} />
+                <Route path="/partners" element={<PartnersPage />} />
+                <Route path="/commissions" element={<CommissionsPage />} />
                 <Route index element={<Navigate to="/orders" replace />} />
               </Route>
               <Route path="*" element={<Navigate to="/orders" replace />} />

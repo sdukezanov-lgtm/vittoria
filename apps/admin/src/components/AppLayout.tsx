@@ -50,6 +50,8 @@ export function AppLayout() {
           label="Чат"
           rightSection={totalUnread > 0 ? <Badge size="sm" circle>{totalUnread}</Badge> : null}
         />
+        <NavLink component={RouterNavLink} to="/partners" label="Партнёры" />
+        <NavLink component={RouterNavLink} to="/commissions" label="Комиссии" />
       </AppShell.Navbar>
       <AppShell.Main>
         <Outlet />

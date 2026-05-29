@@ -46,4 +46,11 @@ describe('AppLayout', () => {
     expect(screen.getByText('Заказы')).toBeInTheDocument();
     expect(await screen.findByText('3')).toBeInTheDocument();
   });
+
+  it('shows Партнёры and Комиссии nav links', () => {
+    vi.mocked(chatApi.listAdminChats).mockResolvedValue({ rows: [], total: 0, page: 1, page_size: 100 });
+    renderLayout();
+    expect(screen.getByText('Партнёры')).toBeInTheDocument();
+    expect(screen.getByText('Комиссии')).toBeInTheDocument();
+  });
 });
