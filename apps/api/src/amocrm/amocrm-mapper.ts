@@ -26,7 +26,7 @@ export interface OrderPatch {
 
 @Injectable()
 export class AmocrmMapper {
-  leadToOrderPatch(lead: AmoLead, fieldIds: AmoFieldIds): OrderPatch {
+  leadToOrderPatch(lead: AmoLead, fieldIds: AmoFieldIds, statusToStage?: Map<number, string>): OrderPatch {
     const fields = lead.custom_fields_values ?? [];
     const byId = new Map(fields.map((f) => [f.field_id, f]));
 
@@ -34,7 +34,16 @@ export class AmocrmMapper {
 
     if (lead.name) patch.productName = lead.name;
 
-    const stage = this.readString(byId, fieldIds.stage);
+    // Prefer the pipeline status -> stage mapping (managers move deals through the funnel).
+    let stage: string | undefined;
+    if (statusToStage && typeof lead.status_id === 'number') {
+      stage = statusToStage.get(lead.status_id);
+    }
+    // Fallback: the vittoria_stage custom field.
+    if (stage === undefined) {
+      const fieldStage = this.readString(byId, fieldIds.stage);
+      if (fieldStage !== undefined) stage = fieldStage;
+    }
     if (stage !== undefined) {
       if (!VALID_STAGES.has(stage)) {
         throw new Error(`Invalid OrderStage from AmoCRM lead ${lead.id}: "${stage}"`);

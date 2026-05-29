@@ -28,6 +28,12 @@ export const envSchema = z.object({
   AMOCRM_FIELD_PREPAYMENT_ID: z.coerce.number().int().positive().default(724378),
   AMOCRM_FIELD_PARTNER_USER_ID: z.coerce.number().int().positive().default(724380),
   AMOCRM_FIELD_PARTNER_SERVICES_ID: z.coerce.number().int().positive().default(724382),
+  AMOCRM_PIPELINE_ID: z.coerce.number().int().positive().default(10959102),
+  AMOCRM_STATUS_STAGE_MAP: z
+    .string()
+    .default(
+      '{"86164754":"preparation_for_production","86164758":"detailing","86164762":"materials_arrival","86164766":"production","86164770":"transfer_to_warehouse","86164774":"completeness_check","86164778":"ready_for_delivery"}',
+    ),
   SMS_PROVIDER_MODE: z.enum(['dev', 'smsc']).default('dev'),
   SMSC_LOGIN: z.string().default(''),
   SMSC_PASSWORD: z.string().default(''),

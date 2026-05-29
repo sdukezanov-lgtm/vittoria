@@ -45,6 +45,30 @@ describe('AmocrmMapper.leadToOrderPatch', () => {
     expect(() => mapper.leadToOrderPatch(bad, fieldIds)).toThrow(/OrderStage/);
   });
 
+  it('uses statusToStage map when lead has a matching status_id', () => {
+    const statusToStage = new Map([[86164766, 'production']]);
+    // Lead has status_id that maps to 'production'; custom field has a different or absent value
+    const lead: AmoLead = {
+      ...baseLead,
+      status_id: 86164766,
+      custom_fields_values: [], // no vittoria_stage custom field
+    };
+    const patch = mapper.leadToOrderPatch(lead, fieldIds, statusToStage);
+    expect(patch.currentStage).toBe('production');
+  });
+
+  it('falls back to custom field when status_id is not in the statusToStage map', () => {
+    const statusToStage = new Map([[86164766, 'production']]);
+    // Lead has a status_id NOT in the map, but vittoria_stage custom field is set
+    const lead: AmoLead = {
+      ...baseLead,
+      status_id: 99999999, // not in the map
+      custom_fields_values: [{ field_id: 1001, values: [{ value: 'detailing' }] }],
+    };
+    const patch = mapper.leadToOrderPatch(lead, fieldIds, statusToStage);
+    expect(patch.currentStage).toBe('detailing');
+  });
+
   it('clamps progressPercent to 0..100', () => {
     const high: AmoLead = { ...baseLead, custom_fields_values: [{ field_id: 1002, values: [{ value: 250 }] }] };
     expect(mapper.leadToOrderPatch(high, fieldIds).progressPercent).toBe(100);

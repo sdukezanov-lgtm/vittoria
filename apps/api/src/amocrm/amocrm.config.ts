@@ -40,6 +40,20 @@ export class AmocrmConfig {
     return this.config.get('AMOCRM_FAILSAFE_CRON', { infer: true });
   }
 
+  get pipelineId(): number {
+    return this.config.get('AMOCRM_PIPELINE_ID', { infer: true });
+  }
+
+  get statusToStage(): Map<number, string> {
+    try {
+      const raw = this.config.get('AMOCRM_STATUS_STAGE_MAP', { infer: true });
+      const obj = JSON.parse(raw) as Record<string, string>;
+      return new Map(Object.entries(obj).map(([k, v]) => [Number(k), v]));
+    } catch {
+      return new Map();
+    }
+  }
+
   get fieldIds(): AmoFieldIds {
     return {
       stage: this.config.get('AMOCRM_FIELD_STAGE_ID', { infer: true }),

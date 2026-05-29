@@ -23,7 +23,7 @@ export class AmocrmSyncService {
    */
   async syncDealById(amocrmDealId: number): Promise<string> {
     const lead = await this.client.getLead(amocrmDealId);
-    const patch = this.mapper.leadToOrderPatch(lead, this.config.fieldIds);
+    const patch = this.mapper.leadToOrderPatch(lead, this.config.fieldIds, this.config.statusToStage);
 
     if (!patch.amocrmContactId) {
       throw new Error(`AmoCRM lead ${amocrmDealId} has no contact`);
