@@ -26,13 +26,14 @@ model User {
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
 
-  authCodes     AuthCode[]
-  sessions      Session[]
-  clientOrders  Order[]             @relation("ClientOrders")
-  partnerOrders Order[]             @relation("PartnerOrders")
-  pushTokens    PushToken[]
-  sentMessages  Message[]
-  commissions   PartnerCommission[] @relation("PartnerCommissions")
+  authCodes            AuthCode[]
+  sessions             Session[]
+  clientOrders         Order[]             @relation("ClientOrders")
+  partnerOrders        Order[]             @relation("PartnerOrders")
+  pushTokens           PushToken[]
+  sentMessages         Message[]
+  commissions          PartnerCommission[] @relation("PartnerCommissions")
+  uploadedAttachments  Attachment[]
 
   @@map("users")
 }
@@ -154,8 +155,9 @@ model Chat {
   orderId   String   @unique @map("order_id") @db.Uuid
   createdAt DateTime @default(now()) @map("created_at")
 
-  order    Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  messages Message[]
+  order       Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  messages    Message[]
+  attachments Attachment[]
 
   @@map("chats")
 }
@@ -171,11 +173,31 @@ model Message {
   redactedAt   DateTime?         @map("redacted_at")
   createdAt    DateTime          @default(now()) @map("created_at")
 
-  chat   Chat @relation(fields: [chatId], references: [id], onDelete: Cascade)
-  sender User @relation(fields: [senderUserId], references: [id])
+  chat            Chat         @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  sender          User         @relation(fields: [senderUserId], references: [id])
+  attachmentFiles Attachment[]
 
   @@index([chatId, createdAt(sort: Desc)])
   @@map("messages")
+}
+
+model Attachment {
+  id             String   @id @default(uuid()) @db.Uuid
+  chatId         String   @map("chat_id") @db.Uuid
+  uploaderUserId String   @map("uploader_user_id") @db.Uuid
+  messageId      String?  @map("message_id") @db.Uuid
+  objectKey      String   @map("object_key")
+  mime           String
+  size           Int
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  chat     Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  uploader User     @relation(fields: [uploaderUserId], references: [id])
+  message  Message? @relation(fields: [messageId], references: [id], onDelete: SetNull)
+
+  @@index([chatId])
+  @@index([messageId])
+  @@map("attachments")
 }
 
 enum PayoutStatus {
