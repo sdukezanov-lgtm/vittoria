@@ -16,6 +16,7 @@ import { ChatModule } from './chat/chat.module';
 import { CommissionsModule } from './commissions/commissions.module';
 import { UsersModule } from './users/users.module';
 import { HealthModule } from './health/health.module';
+import { ServiceModule } from './service/service.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 
@@ -36,6 +37,7 @@ import { RolesGuard } from './common/guards/roles.guard';
     CommissionsModule,
     UsersModule,
     HealthModule,
+    ServiceModule,
     ThrottlerModule.forRoot([{ name: 'global', ttl: 60_000, limit: 60 }]),
   ],
   providers: [

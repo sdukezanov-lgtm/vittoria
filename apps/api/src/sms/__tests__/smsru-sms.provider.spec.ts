@@ -1,12 +1,13 @@
 import axios from 'axios';
 import { ConfigService } from '@nestjs/config';
+import type { Env } from '../../config/env.schema';
 import { SmsRuProvider } from '../smsru-sms.provider';
 
 jest.mock('axios');
 
-function configStub(): ConfigService {
+function configStub(): ConfigService<Env, true> {
   const values: Record<string, string> = { SMS_RU_API_ID: 'api-123', SMS_RU_BASE_URL: 'https://sms.ru' };
-  return { get: (k: string) => values[k] } as unknown as ConfigService;
+  return { get: (k: string) => values[k] } as unknown as ConfigService<Env, true>;
 }
 
 describe('SmsRuProvider', () => {
