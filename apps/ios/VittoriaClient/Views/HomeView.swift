@@ -83,29 +83,31 @@ struct HomeView: View {
     }
 
     var body: some View {
-        content
-            .navigationTitle("VITTORIA HOME")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
-                        path.append(.profile)
-                    } label: {
-                        Image(systemName: "person.crop.circle")
+        NavigationStack(path: $path) {
+            content
+                .navigationTitle("VITTORIA HOME")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button {
+                            path.append(.profile)
+                        } label: {
+                            Image(systemName: "person.crop.circle")
+                        }
                     }
                 }
-            }
-            .navigationDestination(for: HomeRoute.self) { route in
-                switch route {
-                case .history(let orderId):
-                    HistoryView(service: service, orderId: orderId)
-                case .chat(let chatId):
-                    ChatView(service: service, chatId: chatId)
-                case .profile:
-                    ProfileView(service: service)
+                .navigationDestination(for: HomeRoute.self) { route in
+                    switch route {
+                    case .history(let orderId):
+                        HistoryView(service: service, orderId: orderId)
+                    case .chat(let chatId):
+                        ChatView(service: service, chatId: chatId)
+                    case .profile:
+                        ProfileView(service: service)
+                    }
                 }
-            }
-            .task { await viewModel.load() }
+                .task { await viewModel.load() }
+        }
     }
 
     @ViewBuilder

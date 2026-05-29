@@ -21,13 +21,13 @@ struct RootView: View {
     }
 }
 
-/// The logged-in shell: a `NavigationStack` rooted at `HomeView`.
+/// The logged-in shell. `HomeView` owns its own `NavigationStack` (and the
+/// `path` binding) so that pushes via `path.append(...)` actually drive the
+/// stack.
 struct MainTabOrStack: View {
     let service: APIService
 
     var body: some View {
-        NavigationStack {
-            HomeView(service: service)
-        }
+        HomeView(service: service)
     }
 }
