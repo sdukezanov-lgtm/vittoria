@@ -2,16 +2,27 @@ package app.vittoria.client.common
 
 /**
  * Russian display labels for the 7 order stages as defined in the Vittoria spec.
- * Keys are the stage identifiers used in [app.vittoria.client.data.dto.OrderDto.current_stage].
+ * Keys are the exact backend enum values used in [app.vittoria.client.data.dto.OrderDto.current_stage].
  */
 val STAGE_LABELS: Map<String, String> = mapOf(
-    "new"                  to "Новый заказ",
-    "in_production"        to "В производстве",
-    "ready_for_delivery"   to "Готово к доставке",
-    "delivery"             to "Доставка",
-    "installation"         to "Монтаж",
-    "finishing_touches"    to "Финальные работы",
-    "completed"            to "Завершён"
+    "preparation_for_production" to "Подготовка для производства",
+    "detailing"                  to "Деталировка",
+    "materials_arrival"          to "Поступление материалов на склад",
+    "production"                 to "Производство изделия",
+    "transfer_to_warehouse"      to "Передача готового изделия на склад",
+    "completeness_check"         to "Проверка комплектности товара",
+    "ready_for_delivery"         to "Готовность к передаче клиенту",
+)
+
+/** Ordered list of the 7 stages (for timelines / progress). */
+val STAGES: List<String> = listOf(
+    "preparation_for_production",
+    "detailing",
+    "materials_arrival",
+    "production",
+    "transfer_to_warehouse",
+    "completeness_check",
+    "ready_for_delivery",
 )
 
 /**
