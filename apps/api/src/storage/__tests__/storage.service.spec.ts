@@ -1,5 +1,6 @@
 import { ConfigService } from '@nestjs/config';
 import { StorageService } from '../storage.service';
+import type { Env } from '../../config/env.schema';
 
 const sendMock = jest.fn();
 jest.mock('@aws-sdk/client-s3', () => ({
@@ -13,12 +14,12 @@ jest.mock('@aws-sdk/s3-request-presigner', () => ({
   getSignedUrl: jest.fn().mockResolvedValue('https://signed.example/get'),
 }));
 
-function config(): ConfigService {
+function config(): ConfigService<Env, true> {
   const v: Record<string, unknown> = {
     S3_ENDPOINT: 'http://localhost:9000', S3_REGION: 'ru-central1', S3_ACCESS_KEY: 'minioadmin',
     S3_SECRET_KEY: 'minioadmin', S3_BUCKET: 'vittoria-chat', S3_FORCE_PATH_STYLE: true, S3_PRESIGN_TTL_SEC: 600,
   };
-  return { get: (k: string) => v[k] } as unknown as ConfigService;
+  return { get: (k: string) => v[k] } as unknown as ConfigService<Env, true>;
 }
 
 describe('StorageService', () => {
