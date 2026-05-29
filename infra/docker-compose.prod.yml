@@ -1,0 +1,88 @@
+# Production stack for a single server (VPS/VM) with Docker.
+# Run from the repo root:
+#   docker compose -f infra/docker-compose.prod.yml up -d --build
+# Requires a file `infra/.env.prod` with the secrets (see docs/deployment-guide.md).
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-vittoria}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set in .env.prod}
+      POSTGRES_DB: ${POSTGRES_DB:-vittoria}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-vittoria}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    restart: always
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:?set in .env.prod}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:?set in .env.prod}
+    volumes:
+      - miniodata:/data
+
+  api:
+    build:
+      context: ..
+      dockerfile: apps/api/Dockerfile
+    restart: always
+    env_file:
+      - .env.prod
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_started
+    expose:
+      - '3000'
+
+  admin:
+    build:
+      context: ..
+      dockerfile: apps/admin/Dockerfile
+      args:
+        VITE_API_BASE_URL: ${ADMIN_API_BASE_URL:?set ADMIN_API_BASE_URL in .env.prod, e.g. https://api.your-domain/api/v1}
+    restart: always
+    expose:
+      - '80'
+
+  caddy:
+    image: caddy:2-alpine
+    restart: always
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddydata:/data
+      - caddyconfig:/config
+    depends_on:
+      - api
+      - admin
+
+volumes:
+  pgdata:
+  redisdata:
+  miniodata:
+  caddydata:
+  caddyconfig:

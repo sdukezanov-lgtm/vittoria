@@ -1,0 +1,11 @@
+# Caddy: автоматический HTTPS (Let's Encrypt) + реверс-прокси.
+# Замените домены на свои (DNS обоих поддоменов должен указывать на этот сервер).
+# Caddy сам получит и продлит TLS-сертификаты.
+
+api.vittoria.app {
+    reverse_proxy api:3000
+}
+
+admin.vittoria.app {
+    reverse_proxy admin:80
+}

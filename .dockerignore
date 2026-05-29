@@ -1,0 +1,13 @@
+**/node_modules
+**/dist
+**/.gradle
+**/build
+.git
+apps/android
+apps/ios
+**/*.log
+**/.env
+**/.env.*
+!**/.env.test
+.claude
+docs
