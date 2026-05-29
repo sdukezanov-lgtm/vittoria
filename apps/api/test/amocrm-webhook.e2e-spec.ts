@@ -47,7 +47,10 @@ describe('AmoCRM Webhook (e2e)', () => {
   });
 
   it('accepts a valid signed webhook and enqueues a job', async () => {
-    const res = await postWebhook({ leads: { update: [{ id: 555 }] } });
+    // Per-run-unique id: the controller dedups deterministically by (kind:id)
+    // with a Redis TTL, so a fixed id would be deduped on a re-run within the window.
+    const id = Math.floor(Math.random() * 1e9);
+    const res = await postWebhook({ leads: { update: [{ id }] } });
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ accepted: 1 });
 
