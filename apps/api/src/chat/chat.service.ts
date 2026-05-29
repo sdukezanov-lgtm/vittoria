@@ -1,9 +1,13 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import type { Chat, Message, MessageSenderRole, Order } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { AuditService } from '../audit/audit.service';
+import { StorageService } from '../storage/storage.service';
 import type { AuthUser } from '../common/types/auth-user';
+
+const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
 
 export interface ChatSummary {
   id: string;
@@ -18,7 +22,8 @@ export interface ListMessagesArgs {
 }
 
 export interface SendMessageArgs {
-  text: string;
+  text?: string;
+  attachmentIds?: string[];
 }
 
 export interface AdminChatListItem {
@@ -50,6 +55,7 @@ export class ChatService {
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
     private readonly audit: AuditService,
+    private readonly storage: StorageService,
   ) {}
 
   async findOrCreateForOrder(orderId: string, requester: AuthUser): Promise<ChatSummary> {
@@ -111,8 +117,41 @@ export class ChatService {
     return chat;
   }
 
+  async createAttachment(
+    chatId: string,
+    requester: AuthUser,
+    file: { buffer: Buffer; size: number; mime: string },
+  ): Promise<{ attachment_id: string; object_key: string }> {
+    await this.assertChatAccess(chatId, requester);
+    if (file.size > MAX_ATTACHMENT_BYTES) {
+      throw new BadRequestException({ code: 'ATTACHMENT_TOO_LARGE', message: 'Max 10 MB' });
+    }
+    const objectKey = `chats/${chatId}/${randomUUID()}`;
+    await this.storage.putObject(objectKey, file.buffer, file.mime);
+    const row = await this.prisma.attachment.create({
+      data: { chatId, uploaderUserId: requester.id, objectKey, mime: file.mime, size: file.size },
+    });
+    return { attachment_id: row.id, object_key: row.objectKey };
+  }
+
   async sendMessage(chatId: string, requester: AuthUser, args: SendMessageArgs): Promise<Message> {
     const chat = await this.assertChatAccess(chatId, requester);
+
+    const attachmentIds = args.attachmentIds ?? [];
+    if (!args.text && attachmentIds.length === 0) {
+      throw new BadRequestException({ code: 'MESSAGE_EMPTY', message: 'text or attachments required' });
+    }
+
+    let attachmentsJson: { object_key: string; mime: string; size: number }[] = [];
+    if (attachmentIds.length > 0) {
+      const atts = await this.prisma.attachment.findMany({
+        where: { id: { in: attachmentIds }, chatId, uploaderUserId: requester.id, messageId: null },
+      });
+      if (atts.length !== attachmentIds.length) {
+        throw new BadRequestException({ code: 'ATTACHMENT_INVALID', message: 'unknown or already-linked attachment' });
+      }
+      attachmentsJson = atts.map((a) => ({ object_key: a.objectKey, mime: a.mime, size: a.size }));
+    }
 
     const senderRole: MessageSenderRole = requester.role === 'admin' ? 'admin' : 'client';
     const message = await this.prisma.message.create({
@@ -120,9 +159,17 @@ export class ChatService {
         chatId,
         senderUserId: requester.id,
         senderRole,
-        text: args.text,
+        text: args.text ?? null,
+        attachments: attachmentsJson,
       },
     });
+
+    if (attachmentIds.length > 0) {
+      await this.prisma.attachment.updateMany({
+        where: { id: { in: attachmentIds } },
+        data: { messageId: message.id },
+      });
+    }
 
     await this.audit.record({
       actorUserId: requester.id,
@@ -133,7 +180,7 @@ export class ChatService {
     });
 
     if (senderRole === 'admin') {
-      const preview = (args.text ?? '').replace(/[\r\n]+/g, ' ').trim().slice(0, 80) || null;
+      const preview = (args.text ?? 'Вложение').replace(/[\r\n]+/g, ' ').trim().slice(0, 80) || null;
       try {
         await this.notifications.send(chat.order.clientUserId, 'chat.reply.received', {
           orderId: chat.orderId,

@@ -1,4 +1,10 @@
 import { ChatService } from '../chat.service';
+import { StorageService } from '../../storage/storage.service';
+
+const mockStorage = {
+  getPresignedUrl: jest.fn().mockResolvedValue('https://signed/x'),
+  putObject: jest.fn(),
+} as unknown as StorageService;
 
 const ADMIN_ID = '00000000-0000-0000-0000-00000000aaaa';
 const CLIENT_ID = '00000000-0000-0000-0000-00000000bbbb';
@@ -28,7 +34,7 @@ describe('ChatService.findOrCreateForOrder', () => {
   it('creates a new chat if none exists for the order (admin)', async () => {
     const prisma = makePrisma();
     const { notifications, audit } = baseDeps();
-    const svc = new ChatService(prisma as never, notifications as never, audit as never);
+    const svc = new ChatService(prisma as never, notifications as never, audit as never, mockStorage);
     const result = await svc.findOrCreateForOrder(ORDER_ID, { id: ADMIN_ID, role: 'admin' } as never);
     expect(prisma.chat.create).toHaveBeenCalledWith(expect.objectContaining({
       data: { orderId: ORDER_ID },
@@ -46,7 +52,7 @@ describe('ChatService.findOrCreateForOrder', () => {
       message: { count: jest.fn().mockResolvedValue(3) },
     });
     const { notifications, audit } = baseDeps();
-    const svc = new ChatService(prisma as never, notifications as never, audit as never);
+    const svc = new ChatService(prisma as never, notifications as never, audit as never, mockStorage);
     const result = await svc.findOrCreateForOrder(ORDER_ID, { id: CLIENT_ID, role: 'client' } as never);
     expect(prisma.chat.create).not.toHaveBeenCalled();
     expect(result.id).toBe(CHAT_ID);
@@ -60,7 +66,7 @@ describe('ChatService.findOrCreateForOrder', () => {
       },
     });
     const { notifications, audit } = baseDeps();
-    const svc = new ChatService(prisma as never, notifications as never, audit as never);
+    const svc = new ChatService(prisma as never, notifications as never, audit as never, mockStorage);
     await expect(
       svc.findOrCreateForOrder(ORDER_ID, { id: CLIENT_ID, role: 'client' } as never),
     ).rejects.toMatchObject({ status: 404 });
@@ -71,7 +77,7 @@ describe('ChatService.findOrCreateForOrder', () => {
       order: { findUnique: jest.fn().mockResolvedValue(null) },
     });
     const { notifications, audit } = baseDeps();
-    const svc = new ChatService(prisma as never, notifications as never, audit as never);
+    const svc = new ChatService(prisma as never, notifications as never, audit as never, mockStorage);
     await expect(
       svc.findOrCreateForOrder(ORDER_ID, { id: ADMIN_ID, role: 'admin' } as never),
     ).rejects.toMatchObject({ status: 404 });
@@ -100,7 +106,7 @@ describe('ChatService.listMessages', () => {
   it('returns messages without cursor, desc by createdAt, capped at default limit 50', async () => {
     const findMany = jest.fn().mockResolvedValue([{ id: 'm1' }, { id: 'm2' }]);
     const prisma = makePrisma(findMany);
-    const svc = new ChatService(prisma as never, { send: jest.fn() } as never, { record: jest.fn() } as never);
+    const svc = new ChatService(prisma as never, { send: jest.fn() } as never, { record: jest.fn() } as never, mockStorage);
     await svc.listMessages(CHAT_ID, { id: ADMIN_ID, role: 'admin' } as never, {});
     expect(findMany).toHaveBeenCalledWith({
       where: { chatId: CHAT_ID },
@@ -112,7 +118,7 @@ describe('ChatService.listMessages', () => {
   it('translates before=<id> into createdAt < cursor.createdAt', async () => {
     const findMany = jest.fn().mockResolvedValue([]);
     const prisma = makePrisma(findMany);
-    const svc = new ChatService(prisma as never, { send: jest.fn() } as never, { record: jest.fn() } as never);
+    const svc = new ChatService(prisma as never, { send: jest.fn() } as never, { record: jest.fn() } as never, mockStorage);
     await svc.listMessages(CHAT_ID, { id: ADMIN_ID, role: 'admin' } as never, {
       before: 'cursor-msg',
       limit: 10,
@@ -127,7 +133,7 @@ describe('ChatService.listMessages', () => {
   it('client viewing a chat that does not belong to them → 404', async () => {
     const findMany = jest.fn().mockResolvedValue([]);
     const prisma = makePrisma(findMany);
-    const svc = new ChatService(prisma as never, { send: jest.fn() } as never, { record: jest.fn() } as never);
+    const svc = new ChatService(prisma as never, { send: jest.fn() } as never, { record: jest.fn() } as never, mockStorage);
     await expect(
       svc.listMessages(CHAT_ID, { id: 'wrong', role: 'client' } as never, {}),
     ).rejects.toMatchObject({ status: 404 });
@@ -163,7 +169,7 @@ describe('ChatService.sendMessage', () => {
     const prisma = makePrisma();
     const notifications = { send: jest.fn().mockResolvedValue(undefined) };
     const audit = { record: jest.fn().mockResolvedValue(undefined) };
-    const svc = new ChatService(prisma as never, notifications as never, audit as never);
+    const svc = new ChatService(prisma as never, notifications as never, audit as never, mockStorage);
     await svc.sendMessage(
       CHAT_ID,
       { id: ADMIN_ID, role: 'admin' } as never,
@@ -185,7 +191,7 @@ describe('ChatService.sendMessage', () => {
     const prisma = makePrisma();
     const notifications = { send: jest.fn().mockResolvedValue(undefined) };
     const audit = { record: jest.fn().mockResolvedValue(undefined) };
-    const svc = new ChatService(prisma as never, notifications as never, audit as never);
+    const svc = new ChatService(prisma as never, notifications as never, audit as never, mockStorage);
     const longText = 'A'.repeat(200) + '\nB';
     await svc.sendMessage(CHAT_ID, { id: ADMIN_ID, role: 'admin' } as never, { text: longText });
     const payload = notifications.send.mock.calls[0][2];
@@ -197,7 +203,7 @@ describe('ChatService.sendMessage', () => {
     const prisma = makePrisma();
     const notifications = { send: jest.fn() };
     const audit = { record: jest.fn().mockResolvedValue(undefined) };
-    const svc = new ChatService(prisma as never, notifications as never, audit as never);
+    const svc = new ChatService(prisma as never, notifications as never, audit as never, mockStorage);
     await svc.sendMessage(
       CHAT_ID,
       { id: CLIENT_ID, role: 'client' } as never,
@@ -210,7 +216,7 @@ describe('ChatService.sendMessage', () => {
     const prisma = makePrisma();
     const notifications = { send: jest.fn().mockRejectedValue(new Error('queue down')) };
     const audit = { record: jest.fn().mockResolvedValue(undefined) };
-    const svc = new ChatService(prisma as never, notifications as never, audit as never);
+    const svc = new ChatService(prisma as never, notifications as never, audit as never, mockStorage);
     const result = await svc.sendMessage(
       CHAT_ID,
       { id: ADMIN_ID, role: 'admin' } as never,
@@ -232,7 +238,7 @@ describe('ChatService.sendMessage', () => {
     });
     const notifications = { send: jest.fn() };
     const audit = { record: jest.fn().mockResolvedValue(undefined) };
-    const svc = new ChatService(prisma as never, notifications as never, audit as never);
+    const svc = new ChatService(prisma as never, notifications as never, audit as never, mockStorage);
     await expect(
       svc.sendMessage(CHAT_ID, { id: CLIENT_ID, role: 'client' } as never, { text: 'x' }),
     ).rejects.toMatchObject({ status: 404 });
@@ -256,7 +262,7 @@ describe('ChatService.markRead', () => {
         updateMany: jest.fn().mockResolvedValue({ count: 4 }),
       },
     };
-    const svc = new ChatService(prisma as never, { send: jest.fn() } as never, { record: jest.fn() } as never);
+    const svc = new ChatService(prisma as never, { send: jest.fn() } as never, { record: jest.fn() } as never, mockStorage);
     const out = await svc.markRead(CHAT_ID, { id: CLIENT_ID, role: 'client' } as never, 'msg-cursor');
     expect(prisma.message.updateMany).toHaveBeenCalledWith({
       where: {
@@ -284,7 +290,7 @@ describe('ChatService.markRead', () => {
         updateMany: jest.fn(),
       },
     };
-    const svc = new ChatService(prisma as never, { send: jest.fn() } as never, { record: jest.fn() } as never);
+    const svc = new ChatService(prisma as never, { send: jest.fn() } as never, { record: jest.fn() } as never, mockStorage);
     await expect(
       svc.markRead(CHAT_ID, { id: CLIENT_ID, role: 'client' } as never, 'missing'),
     ).rejects.toMatchObject({ status: 404 });
@@ -308,7 +314,7 @@ describe('ChatService.listAdminChats', () => {
         count: jest.fn().mockResolvedValue(1),
       },
     };
-    const svc = new ChatService(prisma as never, { send: jest.fn() } as never, { record: jest.fn() } as never);
+    const svc = new ChatService(prisma as never, { send: jest.fn() } as never, { record: jest.fn() } as never, mockStorage);
     const out = await svc.listAdminChats({ has_unread: true, page: 1, page_size: 20 });
     expect(prisma.chat.findMany).toHaveBeenCalledWith(expect.objectContaining({
       where: { messages: { some: { senderRole: 'client', readAt: null } } },
@@ -331,7 +337,7 @@ describe('ChatService.listAdminChats', () => {
         count: jest.fn().mockResolvedValue(0),
       },
     };
-    const svc = new ChatService(prisma as never, { send: jest.fn() } as never, { record: jest.fn() } as never);
+    const svc = new ChatService(prisma as never, { send: jest.fn() } as never, { record: jest.fn() } as never, mockStorage);
     await svc.listAdminChats({});
     expect(prisma.chat.findMany).toHaveBeenCalledWith(expect.objectContaining({
       where: {},

@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -8,7 +9,10 @@ import {
   Patch,
   Post,
   Query,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { Roles } from '../common/decorators/roles.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { AuthUser } from '../common/types/auth-user';
@@ -17,6 +21,7 @@ import { ChatMapper, MessageResponse } from './chat.mapper';
 import { SendMessageDto } from './dto/send-message.dto';
 import { MarkReadDto } from './dto/mark-read.dto';
 import { ListMessagesQueryDto } from './dto/list-messages.query.dto';
+import { sniffMime } from '../storage/mime-sniff';
 
 @Controller()
 @Roles('client', 'admin')
@@ -50,7 +55,7 @@ export class ChatController {
       before: query.before,
       limit: query.limit,
     });
-    return { rows: msgs.map((m) => this.mapper.toMessageResponse(m)) };
+    return { rows: await Promise.all(msgs.map((m) => this.mapper.toMessageResponse(m))) };
   }
 
   @Post('chats/:id/messages')
@@ -59,8 +64,21 @@ export class ChatController {
     @Param('id', ParseUUIDPipe) chatId: string,
     @Body() dto: SendMessageDto,
   ): Promise<MessageResponse> {
-    const msg = await this.chat.sendMessage(chatId, user, { text: dto.text });
-    return this.mapper.toMessageResponse(msg);
+    const msg = await this.chat.sendMessage(chatId, user, { text: dto.text, attachmentIds: dto.attachment_ids });
+    return await this.mapper.toMessageResponse(msg);
+  }
+
+  @Post('chats/:id/attachments')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadAttachment(
+    @CurrentUser() user: AuthUser,
+    @Param('id', ParseUUIDPipe) chatId: string,
+    @UploadedFile() file: { buffer: Buffer; size: number } | undefined,
+  ): Promise<{ attachment_id: string; object_key: string }> {
+    if (!file) throw new BadRequestException({ code: 'FILE_REQUIRED', message: 'file is required' });
+    const mime = sniffMime(file.buffer);
+    if (!mime) throw new BadRequestException({ code: 'UNSUPPORTED_TYPE', message: 'unsupported file type' });
+    return this.chat.createAttachment(chatId, user, { buffer: file.buffer, size: file.size, mime });
   }
 
   @Patch('chats/:id/read')
