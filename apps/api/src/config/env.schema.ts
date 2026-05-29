@@ -47,6 +47,13 @@ export const envSchema = z.object({
     .string()
     .default('false')
     .transform((v) => v === '1' || v.toLowerCase() === 'true'),
+  S3_ENDPOINT: z.string().url().default('http://localhost:9000'),
+  S3_REGION: z.string().default('ru-central1'),
+  S3_ACCESS_KEY: z.string().default('minioadmin'),
+  S3_SECRET_KEY: z.string().default('minioadmin'),
+  S3_BUCKET: z.string().default('vittoria-chat'),
+  S3_FORCE_PATH_STYLE: z.string().default('true').transform((v) => v === '1' || v.toLowerCase() === 'true'),
+  S3_PRESIGN_TTL_SEC: z.coerce.number().int().positive().default(600),
 })
   .refine(
     (env) => env.SMS_PROVIDER_MODE !== 'smsc' || (env.SMSC_LOGIN !== '' && env.SMSC_PASSWORD !== ''),
