@@ -19,8 +19,13 @@ describe('SmsRuProvider', () => {
     const provider = new SmsRuProvider(configStub());
     const res = await provider.send({ to: '79990000000', text: 'hi' });
     expect(res.providerMessageId).toBe('X-1');
-    const [url] = (axios.post as jest.Mock).mock.calls[0];
+    const [url, body] = (axios.post as jest.Mock).mock.calls[0];
     expect(url).toContain('https://sms.ru/sms/send');
+    const params = body as URLSearchParams;
+    expect(params.get('api_id')).toBe('api-123');
+    expect(params.get('to')).toBe('79990000000');
+    expect(params.get('msg')).toBe('hi');
+    expect(params.get('json')).toBe('1');
   });
 
   it('throws on ERROR status', async () => {
