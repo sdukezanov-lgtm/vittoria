@@ -16,7 +16,7 @@ export function LoginPage() {
   // A successful login flips status to 'authenticated', which re-renders this
   // and redirects — no imperative navigate() needed (that was a render-time side effect).
   if (status === 'authenticated') {
-    return <Navigate to="/orders" replace />;
+    return <Navigate to="/" replace />;
   }
 
   const onRequestCode = async () => {
