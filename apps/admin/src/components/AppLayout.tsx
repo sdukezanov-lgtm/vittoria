@@ -52,6 +52,8 @@ export function AppLayout() {
         />
         <NavLink component={RouterNavLink} to="/partners" label="Партнёры" />
         <NavLink component={RouterNavLink} to="/commissions" label="Комиссии" />
+        <NavLink component={RouterNavLink} to="/audit" label="Аудит" />
+        <NavLink component={RouterNavLink} to="/templates" label="Шаблоны" />
       </AppShell.Navbar>
       <AppShell.Main>
         <Outlet />
