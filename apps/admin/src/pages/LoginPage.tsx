@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Button, Center, Paper, Stack, Text, TextInput, Title } from '@mantine/core';
+import { Button, Center, Paper, Stack, Text, TextInput } from '@mantine/core';
 import { Navigate } from 'react-router-dom';
 import { requestCode } from '../api/auth.api';
 import { ApiError } from '../api/client';
 import { useAuth } from '../auth/useAuth';
+import { Logo } from '../brand/Logo';
 
 export function LoginPage() {
   const { login, status } = useAuth();
@@ -51,9 +52,9 @@ export function LoginPage() {
 
   return (
     <Center h="100vh">
-      <Paper withBorder p="xl" w={360}>
+      <Paper withBorder p="xl" w={360} radius="lg" shadow="sm">
         <Stack>
-          <Title order={3}>VITTORIA HOME</Title>
+          <Logo size={30} tagline />
           {step === 'phone' ? (
             <>
               <TextInput

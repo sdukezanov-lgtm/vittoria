@@ -14,5 +14,7 @@ export function RoleHome() {
   if (status === 'unauthenticated' || !user) {
     return <Navigate to="/login" replace />;
   }
-  return <Navigate to={user.role === 'partner' ? '/partner/orders' : '/orders'} replace />;
+  const to =
+    user.role === 'partner' ? '/partner/orders' : user.role === 'client' ? '/cabinet' : '/orders';
+  return <Navigate to={to} replace />;
 }

@@ -1,7 +1,8 @@
-import { AppShell, Burger, Button, Group, NavLink, Text, Title } from '@mantine/core';
+import { AppShell, Burger, Button, Group, NavLink, Text } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { NavLink as RouterNavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/useAuth';
+import { Logo } from '../brand/Logo';
 
 export function PartnerLayout() {
   const [opened, { toggle }] = useDisclosure();
@@ -23,7 +24,7 @@ export function PartnerLayout() {
         <Group h="100%" px="md" justify="space-between">
           <Group>
             <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
-            <Title order={4}>VITTORIA HOME</Title>
+            <Logo size={22} />
           </Group>
           <Group>
             <Text size="sm" c="dimmed">{user?.phone}</Text>

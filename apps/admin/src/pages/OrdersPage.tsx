@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { Group, Loader, Pagination, Select, Table, Text, TextInput, Title, Stack } from '@mantine/core';
+import { Group, Loader, Pagination, Progress, Select, Table, Text, TextInput, Title, Stack } from '@mantine/core';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { listOrders } from '../api/orders.api';
 import type { OrderStage } from '../api/types';
 import { STAGE_LABELS, STAGES } from '../stageLabels';
+import { StageBadge } from '../brand/StageBadge';
 
 const PAGE_SIZE = 20;
 
@@ -63,8 +64,13 @@ export function OrdersPage() {
               <Table.Tr key={o.id} style={{ cursor: 'pointer' }} onClick={() => navigate(`/orders/${o.id}`)}>
                 <Table.Td>{o.contract_number ?? '—'}</Table.Td>
                 <Table.Td>{o.product_name ?? '—'}</Table.Td>
-                <Table.Td>{STAGE_LABELS[o.current_stage]}</Table.Td>
-                <Table.Td>{o.progress_percent}%</Table.Td>
+                <Table.Td><StageBadge stage={o.current_stage} /></Table.Td>
+                <Table.Td>
+                  <Group gap="xs" wrap="nowrap" w={140}>
+                    <Progress value={o.progress_percent} color="gold" radius="xl" style={{ flex: 1 }} />
+                    <Text size="sm" w={36} ta="right">{o.progress_percent}%</Text>
+                  </Group>
+                </Table.Td>
               </Table.Tr>
             ))}
           </Table.Tbody>

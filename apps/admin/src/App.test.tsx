@@ -9,7 +9,7 @@ describe('App', () => {
 
   it('shows the login screen when unauthenticated', async () => {
     render(<App />);
-    await waitFor(() => expect(screen.getByText('VITTORIA HOME')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('VITTORIA')).toBeInTheDocument());
     expect(screen.getByLabelText(/телефон/i)).toBeInTheDocument();
   });
 });

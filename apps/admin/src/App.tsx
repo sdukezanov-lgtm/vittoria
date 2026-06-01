@@ -24,6 +24,11 @@ import { PartnersPage } from './pages/PartnersPage';
 import { CommissionsPage } from './pages/CommissionsPage';
 import { AuditPage } from './pages/AuditPage';
 import { TemplatesPage } from './pages/TemplatesPage';
+import { ClientLayout } from './components/ClientLayout';
+import { CabinetHomePage } from './pages/cabinet/CabinetHomePage';
+import { CabinetHistoryPage } from './pages/cabinet/CabinetHistoryPage';
+import { CabinetChatPage } from './pages/cabinet/CabinetChatPage';
+import { CabinetProfilePage } from './pages/cabinet/CabinetProfilePage';
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false } },
@@ -68,6 +73,20 @@ export default function App() {
                 <Route path="/partner/orders/:id" element={<PartnerOrderPage />} />
                 <Route path="/partner/commissions" element={<PartnerCommissionsPage />} />
                 <Route path="/partner/profile" element={<ProfilePage />} />
+              </Route>
+              <Route
+                element={
+                  <ProtectedRoute>
+                    <RoleGate allow={['client']}>
+                      <ClientLayout />
+                    </RoleGate>
+                  </ProtectedRoute>
+                }
+              >
+                <Route path="/cabinet" element={<CabinetHomePage />} />
+                <Route path="/cabinet/history/:id" element={<CabinetHistoryPage />} />
+                <Route path="/cabinet/chat/:id" element={<CabinetChatPage />} />
+                <Route path="/cabinet/profile" element={<CabinetProfilePage />} />
               </Route>
               <Route path="*" element={<RoleHome />} />
             </Routes>
