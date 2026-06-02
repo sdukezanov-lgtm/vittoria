@@ -50,3 +50,11 @@ test-output.log
 
 # Docker
 infra/.env
+
+# Production secrets — NEVER commit
+infra/.env.prod
+.env.prod
+*.env.prod
+
+# Superpowers brainstorm visual companion (local mockups, not for repo)
+.superpowers/

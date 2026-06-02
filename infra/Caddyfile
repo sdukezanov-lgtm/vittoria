@@ -1,11 +1,24 @@
 # Caddy: автоматический HTTPS (Let's Encrypt) + реверс-прокси.
-# Замените домены на свои (DNS обоих поддоменов должен указывать на этот сервер).
+# DNS всех доменов ниже должен указывать (A-записи) на этот сервер.
 # Caddy сам получит и продлит TLS-сертификаты.
 
-api.vittoria.app {
-    reverse_proxy api:3000
+# Кабинет клиента (апекс-домен) — тот же SPA-бандл, что и админка;
+# роль `client` после входа уводит на /cabinet.
+vittoria-home.ru {
+    reverse_proxy admin:80
 }
 
-admin.vittoria.app {
+# www → без www
+www.vittoria-home.ru {
+    redir https://vittoria-home.ru{uri} permanent
+}
+
+# Панель сотрудников (админ/партнёр)
+admin.vittoria-home.ru {
     reverse_proxy admin:80
+}
+
+# Сервер (API)
+api.vittoria-home.ru {
+    reverse_proxy api:3000
 }
