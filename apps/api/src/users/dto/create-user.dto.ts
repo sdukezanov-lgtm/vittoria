@@ -1,8 +1,10 @@
-import { IsIn, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
+import { IsIn, IsOptional, IsString, Length, MaxLength } from 'class-validator';
 
 export class CreateUserDto {
+  // Accept any plausibly-phone-shaped input; the service normalizes it to E.164
+  // (+7XXXXXXXXXX) and rejects anything that cannot be normalized.
   @IsString()
-  @Matches(/^\+7\d{10}$/, { message: 'phone must be +7XXXXXXXXXX' })
+  @Length(10, 20, { message: 'phone is required' })
   phone!: string;
 
   @IsIn(['admin', 'partner'])

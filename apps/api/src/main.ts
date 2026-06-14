@@ -1,22 +1,12 @@
 import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { ValidationPipe } from '@nestjs/common';
-import { json } from 'express';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import type { Env } from './config/env.schema';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-
-  // Capture raw body for HMAC verification of webhooks.
-  app.use(
-    json({
-      verify: (req: import('http').IncomingMessage & { rawBody?: Buffer }, _res, buf: Buffer) => {
-        req.rawBody = Buffer.from(buf);
-      },
-    }),
-  );
 
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true, forbidNonWhitelisted: true }));
   app.useGlobalFilters(new HttpExceptionFilter());
