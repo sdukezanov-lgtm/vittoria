@@ -1,15 +1,13 @@
-import { createHmac } from 'node:crypto';
 import { AmocrmWebhookGuard } from '../amocrm-webhook.guard';
 import type { AmocrmConfig } from '../amocrm.config';
 
-const makeCtx = (rawBody: Buffer, headers: Record<string, string>, ip = '127.0.0.1') => ({
+const secret = 'test-webhook-secret-32-chars-xxxxxxx';
+
+const makeCtx = (query: Record<string, unknown>, ip = '127.0.0.1') => ({
   switchToHttp: () => ({
-    getRequest: () => ({ rawBody, headers, ip }),
+    getRequest: () => ({ query, ip }),
   }),
 });
-
-const secret = 'test-webhook-secret-32-chars-xxxxxxx';
-const sign = (body: Buffer) => createHmac('sha256', secret).update(body).digest('hex');
 
 const makeConfig = (overrides: Partial<AmocrmConfig> = {}): AmocrmConfig =>
   ({
@@ -20,35 +18,33 @@ const makeConfig = (overrides: Partial<AmocrmConfig> = {}): AmocrmConfig =>
   }) as any;
 
 describe('AmocrmWebhookGuard', () => {
-  it('passes when HMAC matches and IP allowlist is empty', () => {
-    const body = Buffer.from(JSON.stringify({ ok: true }));
+  it('passes when the URL token matches the secret', () => {
     const guard = new AmocrmWebhookGuard(makeConfig());
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const ctx = makeCtx(body, { 'x-signature': sign(body) }) as any;
-    expect(guard.canActivate(ctx)).toBe(true);
+    expect(guard.canActivate(makeCtx({ token: secret }) as any)).toBe(true);
   });
 
-  it('denies when HMAC is wrong', () => {
-    const body = Buffer.from(JSON.stringify({ ok: true }));
+  it('denies when the token is wrong', () => {
     const guard = new AmocrmWebhookGuard(makeConfig());
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const ctx = makeCtx(body, { 'x-signature': 'deadbeef' }) as any;
-    expect(guard.canActivate(ctx)).toBe(false);
+    expect(guard.canActivate(makeCtx({ token: 'nope' }) as any)).toBe(false);
   });
 
-  it('denies when IP is not in allowlist', () => {
-    const body = Buffer.from(JSON.stringify({ ok: true }));
+  it('denies when the token is missing', () => {
+    const guard = new AmocrmWebhookGuard(makeConfig());
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect(guard.canActivate(makeCtx({}) as any)).toBe(false);
+  });
+
+  it('denies when an IP allowlist is set and the request IP is not in it (token still correct)', () => {
     const guard = new AmocrmWebhookGuard(makeConfig({ webhookIpAllowlist: ['10.0.0.1'] }));
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const ctx = makeCtx(body, { 'x-signature': sign(body) }, '127.0.0.1') as any;
-    expect(guard.canActivate(ctx)).toBe(false);
+    expect(guard.canActivate(makeCtx({ token: secret }, '127.0.0.1') as any)).toBe(false);
   });
 
-  it('allows when IP is in allowlist', () => {
-    const body = Buffer.from(JSON.stringify({ ok: true }));
+  it('passes when the IP is in the allowlist and the token matches', () => {
     const guard = new AmocrmWebhookGuard(makeConfig({ webhookIpAllowlist: ['127.0.0.1'] }));
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const ctx = makeCtx(body, { 'x-signature': sign(body) }, '127.0.0.1') as any;
-    expect(guard.canActivate(ctx)).toBe(true);
+    expect(guard.canActivate(makeCtx({ token: secret }, '127.0.0.1') as any)).toBe(true);
   });
 });

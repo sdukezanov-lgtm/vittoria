@@ -1,6 +1,5 @@
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
-import { createHmac } from 'node:crypto';
 import { getQueueToken } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { createTestApp } from './helpers/app.factory';
@@ -29,28 +28,33 @@ describe('AmoCRM Webhook (e2e)', () => {
     await inQueue.obliterate({ force: true });
   });
 
-  function postWebhook(body: object) {
-    const raw = Buffer.from(JSON.stringify(body));
-    const sig = createHmac('sha256', SECRET).update(raw).digest('hex');
+  // amoCRM authenticates via a secret in the URL (?token=...) and POSTs
+  // application/x-www-form-urlencoded; supertest .type('form') serializes the
+  // nested object with bracket notation (leads[update][0][id]=...), matching amoCRM.
+  function postWebhook(body: object, token: string = SECRET) {
     return request(app.getHttpServer())
-      .post('/api/v1/amocrm/webhooks')
-      .set('Content-Type', 'application/json')
-      .set('x-signature', sig)
+      .post(`/api/v1/amocrm/webhooks?token=${encodeURIComponent(token)}`)
+      .type('form')
       .send(body);
   }
 
-  it('rejects with 403 when HMAC signature is missing/invalid', async () => {
-    const res = await request(app.getHttpServer())
+  it('rejects with 403 when the URL token is missing or wrong', async () => {
+    const missing = await request(app.getHttpServer())
       .post('/api/v1/amocrm/webhooks')
+      .type('form')
       .send({ leads: { update: [{ id: 1 }] } });
-    expect(res.status).toBe(403);
+    expect(missing.status).toBe(403);
+
+    const wrong = await postWebhook({ leads: { update: [{ id: 1 }] } }, 'wrong-token');
+    expect(wrong.status).toBe(403);
   });
 
-  it('accepts a valid signed webhook and enqueues a job', async () => {
+  it('accepts a valid webhook (status/stage change) and enqueues a job', async () => {
     // Per-run-unique id: the controller dedups deterministically by (kind:id)
     // with a Redis TTL, so a fixed id would be deduped on a re-run within the window.
     const id = Math.floor(Math.random() * 1e9);
-    const res = await postWebhook({ leads: { update: [{ id }] } });
+    // amoCRM reports a stage change under leads[status].
+    const res = await postWebhook({ leads: { status: [{ id, status_id: 86164758, pipeline_id: 10959102 }] } });
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ accepted: 1 });
 

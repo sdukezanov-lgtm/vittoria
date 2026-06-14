@@ -8,9 +8,27 @@ import { AmocrmWebhookGuard } from './amocrm-webhook.guard';
 import { AmocrmIdempotencyService } from './amocrm-idempotency.service';
 import { createHash } from 'node:crypto';
 
+// amoCRM delivers webhooks as application/x-www-form-urlencoded. Express (extended)
+// parses keys like `leads[status][0][id]=123` into nested structures, where each
+// section (add/update/status/...) is an array of objects — or, when qs falls back
+// past its array limit, an object keyed by index. We accept both shapes.
 interface AmoWebhookBody {
-  leads?: { add?: Array<{ id: number }>; update?: Array<{ id: number }> };
-  contacts?: { update?: Array<{ id: number }> };
+  leads?: Record<string, unknown>;
+  contacts?: Record<string, unknown>;
+}
+
+/** Extract positive integer entity ids from an amoCRM webhook section (array or index-object). */
+function extractIds(section: unknown): number[] {
+  if (!section || typeof section !== 'object') return [];
+  const items = Array.isArray(section) ? section : Object.values(section as Record<string, unknown>);
+  const ids: number[] = [];
+  for (const item of items) {
+    if (item && typeof item === 'object') {
+      const id = Number((item as { id?: unknown }).id);
+      if (Number.isInteger(id) && id > 0) ids.push(id);
+    }
+  }
+  return ids;
 }
 
 @Controller('amocrm')
@@ -28,21 +46,25 @@ export class AmocrmWebhookController {
   @Post('webhooks')
   @HttpCode(200)
   async receive(@Body() body: AmoWebhookBody): Promise<{ accepted: number }> {
-    const events: Array<{ kind: string; id: number }> = [];
+    const leads = (body?.leads ?? {}) as Record<string, unknown>;
 
-    for (const lead of body.leads?.add ?? []) events.push({ kind: 'lead.add', id: lead.id });
-    for (const lead of body.leads?.update ?? []) events.push({ kind: 'lead.update', id: lead.id });
-    for (const c of body.contacts?.update ?? []) events.push({ kind: 'contact.update', id: c.id });
+    // A lead add, update, or status (stage) change all mean "re-sync this lead";
+    // dedupe ids that appear across multiple sections of the same delivery.
+    const leadIds = new Set<number>([
+      ...extractIds(leads.add),
+      ...extractIds(leads.update),
+      ...extractIds(leads.status),
+    ]);
 
     let accepted = 0;
-    for (const ev of events) {
+    for (const id of leadIds) {
       // Deterministic id (no timestamp) so amoCRM redeliveries of the same event
       // collapse to one job within the idempotency window. Genuinely distinct later
       // updates are reconciled by the failsafe sync cron.
-      const eventId = createHash('sha256').update(`${ev.kind}:${ev.id}`).digest('hex').slice(0, 32);
+      const eventId = createHash('sha256').update(`lead.update:${id}`).digest('hex').slice(0, 32);
       const isNew = await this.idempotency.markIfNew(eventId);
       if (!isNew) continue;
-      await this.queue.add('process', { kind: ev.kind, entityId: ev.id, eventId }, { jobId: eventId });
+      await this.queue.add('process', { kind: 'lead.update', entityId: id, eventId }, { jobId: eventId });
       accepted++;
     }
 

@@ -1,7 +1,21 @@
 import { CanActivate, ExecutionContext, Injectable, Logger } from '@nestjs/common';
-import { createHmac, timingSafeEqual } from 'node:crypto';
+import { timingSafeEqual } from 'node:crypto';
 import { AmocrmConfig } from './amocrm.config';
 
+/**
+ * Authenticates inbound amoCRM webhooks.
+ *
+ * amoCRM does NOT sign webhook deliveries with a usable HMAC (it POSTs
+ * application/x-www-form-urlencoded with no signature header), so we authenticate
+ * via a shared secret carried in the registered webhook URL's query string:
+ *   https://api.<domain>/api/v1/amocrm/webhooks?token=<AMOCRM_WEBHOOK_SECRET>
+ *
+ * The webhook body itself is treated as an untrusted trigger only — the inbound
+ * processor re-fetches the lead from amoCRM with our own access token, so the
+ * payload never carries trusted data.
+ *
+ * An optional IP allowlist (AMOCRM_WEBHOOK_IP_ALLOWLIST) is still honoured when set.
+ */
 @Injectable()
 export class AmocrmWebhookGuard implements CanActivate {
   private readonly logger = new Logger(AmocrmWebhookGuard.name);
@@ -10,8 +24,7 @@ export class AmocrmWebhookGuard implements CanActivate {
 
   canActivate(context: ExecutionContext): boolean {
     const req = context.switchToHttp().getRequest<{
-      rawBody?: Buffer;
-      headers: Record<string, string | string[] | undefined>;
+      query?: Record<string, unknown>;
       ip?: string;
     }>();
 
@@ -24,16 +37,14 @@ export class AmocrmWebhookGuard implements CanActivate {
       }
     }
 
-    const provided = (req.headers['x-signature'] ?? req.headers['x-amocrm-signature']) as string | undefined;
-    if (!provided || !req.rawBody) {
-      this.logger.warn('missing signature or rawBody');
+    const provided = typeof req.query?.token === 'string' ? req.query.token : '';
+    const expected = this.config.webhookSecret;
+    const a = Buffer.from(provided);
+    const b = Buffer.from(expected);
+    if (a.length !== b.length || !timingSafeEqual(a, b)) {
+      this.logger.warn('webhook rejected: bad or missing token');
       return false;
     }
-
-    const expected = createHmac('sha256', this.config.webhookSecret).update(req.rawBody).digest('hex');
-    const a = Buffer.from(provided, 'hex');
-    const b = Buffer.from(expected, 'hex');
-    if (a.length !== b.length) return false;
-    return timingSafeEqual(a, b);
+    return true;
   }
 }
