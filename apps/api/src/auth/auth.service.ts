@@ -7,6 +7,7 @@ import type { Env } from '../config/env.schema';
 import * as bcrypt from 'bcrypt';
 import { randomInt, randomUUID } from 'node:crypto';
 import { TokensService } from './tokens.service';
+import { normalizePhone } from '../common/phone';
 
 export interface RequestCodeResult {
   retryAfterSec: number;
@@ -22,7 +23,11 @@ export class AuthService {
     private readonly tokens: TokensService,
   ) {}
 
-  async requestCode(phone: string): Promise<RequestCodeResult> {
+  async requestCode(rawPhone: string): Promise<RequestCodeResult> {
+    const phone = normalizePhone(rawPhone);
+    if (!phone) {
+      throw new BadRequestException({ code: 'AUTH_PHONE_INVALID', message: 'invalid phone number' });
+    }
     const ttlSec = this.config.get('OTP_TTL_SEC', { infer: true });
     const rateLimitPerMin = this.config.get('OTP_REQUEST_RATE_LIMIT_PER_MIN', { infer: true });
 
@@ -63,10 +68,14 @@ export class AuthService {
   }
 
   async verifyCode(
-    phone: string,
+    rawPhone: string,
     code: string,
     deviceInfo: Record<string, unknown> = {},
   ): Promise<{ accessToken: string; refreshToken: string; user: { id: string; phone: string; role: string } }> {
+    const phone = normalizePhone(rawPhone);
+    if (!phone) {
+      throw new BadRequestException({ code: 'AUTH_PHONE_INVALID', message: 'invalid phone number' });
+    }
     const maxAttempts = this.config.get('OTP_MAX_ATTEMPTS', { infer: true });
     const refreshTtlSec = this.config.get('JWT_REFRESH_TTL_SEC', { infer: true });
 

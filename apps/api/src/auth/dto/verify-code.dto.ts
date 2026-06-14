@@ -1,8 +1,8 @@
-import { IsObject, IsOptional, IsString, Length, Matches } from 'class-validator';
+import { IsObject, IsOptional, IsString, Length } from 'class-validator';
 
 export class VerifyCodeDto {
   @IsString()
-  @Matches(/^\+7\d{10}$/)
+  @Length(10, 20, { message: 'phone is required' })
   phone!: string;
 
   @IsString()

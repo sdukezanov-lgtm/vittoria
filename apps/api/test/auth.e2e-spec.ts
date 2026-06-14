@@ -196,4 +196,25 @@ describe('Auth (e2e)', () => {
     expect(res.status).toBe(404);
     expect(res.body.error.code).toBe('AUTH_PHONE_NOT_REGISTERED');
   });
+
+  it('POST /auth/request-code accepts 8XXX format and finds the +7 user', async () => {
+    await prisma.user.upsert({
+      where: { phone: '+79991234567' },
+      update: {},
+      create: { phone: '+79991234567' },
+    });
+    const res = await request(app.getHttpServer())
+      .post('/api/v1/auth/request-code')
+      .send({ phone: '89991234567' });
+    expect(res.status).toBe(200);
+    const codes = await prisma.authCode.findMany({ where: { phone: '+79991234567' } });
+    expect(codes).toHaveLength(1);
+  });
+
+  it('POST /auth/request-code with a foreign number returns 400', async () => {
+    const res = await request(app.getHttpServer())
+      .post('/api/v1/auth/request-code')
+      .send({ phone: '+992927077539' });
+    expect(res.status).toBe(400);
+  });
 });

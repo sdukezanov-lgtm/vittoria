@@ -71,4 +71,26 @@ describe('AuthService.requestCode (unit)', () => {
     await expect(svc.requestCode('+78880000001')).rejects.toThrow(/registered/i);
     expect(sms.send).not.toHaveBeenCalled();
   });
+
+  it('normalizes the phone before lookup and SMS (8XXX -> +7XXX)', async () => {
+    const { prisma, sms, audit, config, tokens } = makeDeps();
+    const svc = new AuthService(prisma, sms, audit, config, tokens);
+
+    await svc.requestCode('89991234567');
+
+    expect(prisma.user.findUnique).toHaveBeenCalledWith({ where: { phone: '+79991234567' } });
+    expect(prisma.authCode.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ phone: '+79991234567' }) }),
+    );
+    expect(sms.send).toHaveBeenCalledWith(
+      expect.objectContaining({ to: '+79991234567' }),
+    );
+  });
+
+  it('throws BadRequest for an unnormalizable phone', async () => {
+    const { prisma, sms, audit, config, tokens } = makeDeps();
+    const svc = new AuthService(prisma, sms, audit, config, tokens);
+    await expect(svc.requestCode('+992927077539')).rejects.toThrow(/invalid phone/i);
+    expect(sms.send).not.toHaveBeenCalled();
+  });
 });

@@ -1,7 +1,9 @@
-import { IsString, Matches } from 'class-validator';
+import { IsString, Length } from 'class-validator';
 
 export class RequestCodeDto {
+  // Accept any plausibly-phone-shaped input; the service normalizes it to E.164
+  // (+7XXXXXXXXXX) and rejects anything that cannot be normalized.
   @IsString()
-  @Matches(/^\+7\d{10}$/, { message: 'phone must be in E.164 format +7XXXXXXXXXX' })
+  @Length(10, 20, { message: 'phone is required' })
   phone!: string;
 }
