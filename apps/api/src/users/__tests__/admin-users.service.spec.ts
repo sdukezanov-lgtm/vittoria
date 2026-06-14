@@ -26,6 +26,18 @@ describe('AdminUsersService.createUser', () => {
     expect(u.id).toBe('u-new');
   });
 
+  it('normalizes the phone to +7 on create', async () => {
+    const prisma = makePrisma();
+    const svc = new AdminUsersService(prisma as never);
+
+    await svc.createUser({ phone: '89991234567', role: 'admin' });
+
+    expect(prisma.user.findUnique).toHaveBeenCalledWith({ where: { phone: '+79991234567' } });
+    expect(prisma.user.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ phone: '+79991234567' }) }),
+    );
+  });
+
   it('throws ConflictException when phone already exists', async () => {
     const prisma = makePrisma({
       user: {

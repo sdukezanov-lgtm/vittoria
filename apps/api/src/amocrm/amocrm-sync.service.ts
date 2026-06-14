@@ -4,6 +4,7 @@ import { AuditService } from '../audit/audit.service';
 import { AmocrmConfig } from './amocrm.config';
 import { AmocrmMapper } from './amocrm-mapper';
 import { AMOCRM_CLIENT, type AmoCrmClient } from './amocrm.types';
+import { normalizePhone } from '../common/phone';
 
 @Injectable()
 export class AmocrmSyncService {
@@ -32,11 +33,12 @@ export class AmocrmSyncService {
     if (!contact.phone) {
       throw new Error(`AmoCRM contact ${contact.id} has no phone`);
     }
+    const phone = normalizePhone(contact.phone) ?? contact.phone;
 
     const client = await this.prisma.user.upsert({
-      where: { phone: contact.phone },
+      where: { phone },
       update: { firstName: contact.name ?? undefined, amocrmContactId: contact.id },
-      create: { phone: contact.phone, firstName: contact.name ?? undefined, amocrmContactId: contact.id },
+      create: { phone, firstName: contact.name ?? undefined, amocrmContactId: contact.id },
     });
 
     const existing = await this.prisma.order.findUnique({ where: { amocrmDealId } });

@@ -1,6 +1,7 @@
 import { ConflictException, Injectable } from '@nestjs/common';
 import type { User, UserRole } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { normalizePhone } from '../common/phone';
 
 export interface CreateUserArgs {
   phone: string;
@@ -27,13 +28,17 @@ export class AdminUsersService {
   constructor(private readonly prisma: PrismaService) {}
 
   async createUser(args: CreateUserArgs): Promise<User> {
-    const existing = await this.prisma.user.findUnique({ where: { phone: args.phone } });
+    const phone = normalizePhone(args.phone);
+    if (!phone) {
+      throw new ConflictException({ code: 'USER_PHONE_INVALID', message: 'invalid phone number' });
+    }
+    const existing = await this.prisma.user.findUnique({ where: { phone } });
     if (existing) {
       throw new ConflictException({ code: 'USER_PHONE_EXISTS', message: 'Phone already registered' });
     }
     return this.prisma.user.create({
       data: {
-        phone: args.phone,
+        phone,
         role: args.role,
         firstName: args.first_name,
         lastName: args.last_name,
