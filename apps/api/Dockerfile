@@ -21,4 +21,5 @@ ENV NODE_ENV=production
 EXPOSE 3000
 
 # Apply DB migrations, then start. (Safe to re-run; deploy applies only new migrations.)
-CMD ["sh", "-c", "pnpm exec prisma migrate deploy && node dist/main.js"]
+# Note: `nest build` emits to dist/src/ (src+test share a root), so entry is dist/src/main.js.
+CMD ["sh", "-c", "pnpm exec prisma migrate deploy && node dist/src/main.js"]
