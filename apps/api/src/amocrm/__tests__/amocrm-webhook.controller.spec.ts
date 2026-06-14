@@ -2,7 +2,7 @@ import { AmocrmWebhookController } from '../amocrm-webhook.controller';
 
 // Minimal stubs for the queue + idempotency dependencies.
 const makeDeps = (markIfNew = true) => {
-  const added: Array<{ name: string; data: { kind: string; entityId: number; eventId: string }; opts: { jobId: string } }> = [];
+  const added: Array<{ name: string; data: { kind: string; entityId: number; eventId: string }; opts?: { jobId?: string } }> = [];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const queue = { add: jest.fn(async (name: string, data: any, opts: any) => { added.push({ name, data, opts }); }) } as any;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -31,8 +31,12 @@ describe('AmocrmWebhookController', () => {
     const ids = added.map((a) => a.data.entityId).sort((x, y) => x - y);
     expect(ids).toEqual([555, 24484437]);
     expect(added.every((a) => a.data.kind === 'lead.update')).toBe(true);
-    // Each job is keyed by its idempotency eventId.
-    expect(added.every((a) => a.opts.jobId === a.data.eventId)).toBe(true);
+    // Each job carries its idempotency eventId in the payload...
+    expect(added.every((a) => typeof a.data.eventId === 'string' && a.data.eventId.length > 0)).toBe(true);
+    // ...but must NOT set a deterministic BullMQ jobId — completed jobs are retained
+    // (removeOnComplete age 24h), so reusing eventId as jobId would block every later
+    // change to the same lead for 24h.
+    expect(added.every((a) => a.opts === undefined || a.opts.jobId === undefined)).toBe(true);
   });
 
   it('also handles the object-of-index shape (qs arrayLimit fallback)', async () => {

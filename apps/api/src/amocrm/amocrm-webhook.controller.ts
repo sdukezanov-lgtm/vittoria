@@ -58,13 +58,16 @@ export class AmocrmWebhookController {
 
     let accepted = 0;
     for (const id of leadIds) {
-      // Deterministic id (no timestamp) so amoCRM redeliveries of the same event
-      // collapse to one job within the idempotency window. Genuinely distinct later
-      // updates are reconciled by the failsafe sync cron.
+      // Collapse amoCRM redeliveries of the same event via a short-lived Redis key
+      // (markIfNew, ~10 min). Genuinely distinct later changes to the same lead are
+      // re-synced once that window passes; anything missed is reconciled by the
+      // failsafe cron. NOTE: do NOT use eventId as the BullMQ jobId — completed jobs
+      // are retained (removeOnComplete age 24h), so a deterministic jobId would block
+      // every later change to the same lead for 24h. Let BullMQ assign a unique id.
       const eventId = createHash('sha256').update(`lead.update:${id}`).digest('hex').slice(0, 32);
       const isNew = await this.idempotency.markIfNew(eventId);
       if (!isNew) continue;
-      await this.queue.add('process', { kind: 'lead.update', entityId: id, eventId }, { jobId: eventId });
+      await this.queue.add('process', { kind: 'lead.update', entityId: id, eventId });
       accepted++;
     }
 
